@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mead Maker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <link rel="icon" href="/mead_calculation_icon.ico" sizes="any">
+  <link rel="shortcut icon" href="/mead_calculation_icon.ico">
+</head>
+<body>
+  <div class="app">
+    <header class="app-header">
+      <h1>Mead Helper</h1>
+      <button id="theme-toggle" class="icon-button" aria-label="Open settings">
+        <img src="gear.png" alt="Settings">
+      </button>
+    </header>
+
+    <!-- home screen area -->
+    <section id="screen-home" class="screen active">
+      <h2>Tools</h2>
+      <div class="home-grid">
+        <button class="home-button" data-target="screen-mead-recipe">Mead Recipe</button>
+        <button class="home-button" data-target="screen-abv">ABV Calculator</button>
+        <button class="home-button" data-target="screen-ph">pH Adjustment</button>
+        <button class="home-button" data-target="screen-fermentation-tracking">Fermentation Tracking</button>
+        <button class="home-button" data-target="screen-honey-density">Honey Density</button>
+        <button class="home-button" data-target="screen-honey-database">Honey Database</button>
+        <button class="home-button" data-target="screen-yeast-database">Yeast Database</button>
+      </div>
+    </section>
+
+    <section id="screen-settings" class="screen">
+        <button class="back-home">← Home</button>
+        <h2>Settings</h2>
+
+        <div class="settings-row">
+            <span>Dark mode</span>
+            <label class="switch">
+                <input type="checkbox" id="dark-mode-toggle">
+                <span class="slider"></span>
+            </label>
+        </div>
+    </section>
+
+
+
+
+
+
+
+
+
+    
+    <section id="screen-mead-recipe" class="screen">
+      <button class="back-home">← Home</button>
+      <h2>Mead Recipe</h2>
+
+      <label>Batch size (L)
+        <input id="mead_volume_l_recipe" value="4.5" inputmode="decimal">
+      </label>
+
+      <label>Target final gravity (FG)
+        <input id="mead_final_gravity_recipe" value="1.02" inputmode="decimal">
+      </label>
+
+      <label>Target ABV (%)
+        <input id="mead_target_abv_recipe" value="10" inputmode="decimal">
+      </label>
+
+      <label>Honey type
+        <select id="mead_honey_select_recipe"></select>
+      </label>
+
+      <label>Yeast type
+        <select id="mead_yeast_select_recipe"></select>
+      </label>
+
+      <div class="checkbox-row">
+        <input id="mead_use_fruit_recipe" type="checkbox">
+        <label for="mead_use_fruit_recipe">Use Fruit</label>
+      </div>
+
+      <label>Fruit Type (optional)
+        <input id="mead_fruit_type_recipe" placeholder="e.g. Blackberry" autocomplete="off">
+      </label>
+
+      <button id="mead_recipe_button_recipe" class="Calculate_buttons">Calculate Mead Recipe</button>
+
+      <pre id="mead_recipe_output_recipe" class="result_box"></pre>
+    </section>
+
+    <!-- ABV SCREEN -->
+    <section id="screen-abv" class="screen">
+      <button class="back-home">← Home</button>
+      <h2>ABV Calculator</h2>
+      <label>
+        Starting Gravity
+        <input id="og" value="1.100" inputmode="decimal">
+      </label>
+      <label>
+        Final Gravity
+        <input id="fg" value="1.010" inputmode="decimal">
+      </label>
+      <button id="abv-btn" class="Calculate_buttons">Calculate ABV</button>
+      <p id="abv-output"></p>
+    </section>
+
+
+
+
+
+
+
+
+
+
+
+    <!-- PLACEHOLDER SCREENS (you can fill these later) -->
+    <section id="screen-ph" class="screen">
+      <button class="back-home">← Home</button>
+      <h2>pH Adjustment</h2>
+      <label>Starting pH
+        <input id="starting_pH" value="3.2" inputmode="decimal">
+      </label>
+      <label>Desired pH
+        <input id="desired_pH" value="3.4" inputmode="decimal">
+      </label>
+      <label>Chemical being used to adjust pH</label>
+      <!--Need to add in a selection of common forms of pH adjusters, need to be able to increase and decrease pH so do a > and < for the difference of start and end pH to see if negative...-->
+    </section>
+
+
+
+
+
+
+
+
+
+
+    <section id="screen-fermentation-tracking" class="screen">
+      <button class="back-home">← Home</button>
+      <h2>Fermentation Tracking</h2>
+      
+      <label>Starting SG
+        <input id="starting_sg_tracking" value="1.105" inputmode="decimal">
+      </label>
+      
+      <label>2<sup>nd</sup> SG
+        <input id="second_sg_tracking" value="1.044" inputmode="decimal">
+      </label>
+      
+      <label>Time for 2<sup>nd</sup> SG reading
+        <input id="second_day_tracking" value="19" inputmode="decimal">
+      </label>
+      
+      <label>3<sup>rd</sup> SG (if no 3<sup>rd</sup> point then leave blank)
+        <input id="third_sg_tracking" value="1.05" inputmode="decimal">
+      </label>
+
+      <label>Time for 3<sup>rd</sup> SG reading (if no 3<sup>rd</sup> point then leave blank)
+        <input id="third_day_tracking" value="3" inputmode="decimal">
+      </label>
+      
+      <label>Initial mass of yeast (g)
+        <input id="mass_of_yeast_tracking" value="5" inputmode="decimal">
+      </label>
+      
+      <label>Volume of brew (L)
+        <input id="volume_of_brew_tracking" value="4.5" inputmode="decimal">
+      </label>
+
+      <label>Graph until day
+        <input id="predict_day_tracking" inputmode="decimal" value="30">
+      </label>
+      
+      <button id="fermentation_tracking_button" class="Calculate_buttons">Calculate Fermentation</button>
+      
+      <section class="charts-wrap" aria-label="Fermentation_graphs">
+
+          <!--Graphs-->
+          <!-- Shape fitting -->
+          <div class="chart-card">
+            <h3 class="chart-title">SG vs Time (Shape fit)</h3>
+            <canvas id="sgShapeChart"></canvas>
+          </div>
+
+          <div class="chart-card">
+            <h3 class="chart-title">ABV vs Time (Shape fit)</h3>
+            <canvas id="abvShapeChart"></canvas>
+          </div>
+
+          <!--Monod-->
+          <div class="chart-card">
+            <h3 class="chart-title">SG vs Time (Monod)</h3>
+            <canvas id="sgMonodChart"></canvas>
+          </div>
+
+          <div class="chart-card">
+            <h3 class="chart-title">Yeast Mass vs Time (Monod)</h3>
+            <canvas id="yeastMonodChart"></canvas>
+          </div>
+
+          <div class="chart-card">
+            <h3 class="chart-title">ABV vs Time (Monod)</h3>
+            <canvas id="abvMonodChart"></canvas>
+          </div>
+        </section>
+    </section>
+
+
+
+
+
+
+
+
+
+
+
+
+    <section id="screen-honey-density" class="screen">
+      <button class="back-home">← Home</button>
+      <h2>Honey Density</h2>
+      <p>Coming soon…</p>
+    </section>
+
+
+
+
+
+
+
+
+
+
+
+    <section id="screen-honey-database" class="screen">
+      <button class="back-home">← Home</button>
+      <h2>Honey Database</h2>
+
+      <div class="table-wrapper">    
+        <table class="data-table">
+          <thead>
+              <tr>
+                  <th>Honey name</th>
+                  <th>Density (kg/m³)</th>
+                  <th>Sugar (%)</th>
+                  <th>Price per bottle</th>
+                  <th>Mass per bottle</th>
+                  <th></th>
+              </tr>
+          </thead>
+          <tbody id="honey-table-body">
+              <!---Js will fill this-->
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Add new honey</h3>
+      <div class="honey-form">
+        <input
+        id="honey-name-input"
+        placeholder="Orange Blossom"
+        autocomplete="off"
+        >
+        <input
+        id="honey-density-input"
+        type="number"
+        step="1"
+        placeholder="Density (kg/m³)"
+        >
+        <input
+        id="honey-sugar-input"
+        type="number"
+        step="0.1"
+        placeholder="Sugar (%)"
+        >
+        <input
+        id="honey-price-bottle-input"
+        type="number"
+        step="0.1"
+        placeholder="Price per bottle (£)"
+        >
+        <input
+        id="honey-mass-bottle-input"
+        type="number"
+        step="0.1"
+        placeholder="Mass per bottle (g)"
+        >
+        <button id="honey-add-btn">Add</button>
+      </div>
+    </section>
+
+
+
+
+
+
+
+
+
+    <section id="screen-yeast-database" class="screen">
+      <button class="back-home">← Home</button>
+      <h2>Yeast Database</h2>
+
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Yeast Name</th>
+              <th>N Requirement</th>
+              <th>Packet Weight (g)</th>
+              <th>Cost per packet (£)</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="yeast-table-body_yeastdb"></tbody>
+        </table>
+      </div>
+
+      <h3>Add new yeast</h3>
+
+      <div class="honey-form">
+        <input id="yeast_name_input_yeastdb" placeholder="e.g. Lalvin D-47" autocomplete="off">
+
+        <select id="yeast_nreq_input_yeastdb">
+          <option value="Low">Low</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="High">High</option>
+        </select>
+
+        <input id="yeast_packet_weight_input_yeastdb" placeholder="5" inputmode="decimal">
+        <input id="yeast_cost_input_yeastdb" placeholder="6.00" inputmode="decimal">
+
+        <button id="yeast_add_btn_yeastdb">Add</button>
+      </div>
+    </section>
+  </div>
+
+
+
+
+
+
+
+
+
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script type="module" src="./fermentation.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
