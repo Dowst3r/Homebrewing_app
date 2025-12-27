@@ -1,0 +1,449 @@
+/* THEME VARIABLES
+   Light mode is default (plain white), dark mode is when body has .theme-dark
+*/
+:root {
+    --bg: #ffffff;
+    --bg-card: #f3f4f6;
+    --text: #020617;
+    --accent: #16a34a;
+    --accent-text: #ecfdf3;
+    --border: #e5e7eb;
+    --home-btn-bg: #111827;
+    --home-btn-bg-soft: #e5e7eb;
+}
+
+body.theme-dark {
+    --bg: #020617;
+    --bg-card: #0f172a;
+    --text: #f9fafb;
+    --accent: #22c55e;
+    --accent-text: #022c22;
+    --border: #1f2937;
+    --home-btn-bg: #111827;
+    --home-btn-bg-soft: #111827;
+}
+
+/* Global layout */
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+}
+
+.app {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+/* Header */
+.app-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.app-header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+/* Gear / icon button */
+.icon-button {
+    border: none;
+    background: transparent;
+    padding: 0.25rem;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.icon-button img {
+    width: 24px;
+    height: 24px;
+    display: block;
+}
+
+/* Smooth rotation on hover */
+#theme-toggle img {
+    transform-origin: 50% 50%;
+    transition: transform 500ms ease;
+}
+
+/* Hovering the button rotates the gear image 90deg */
+#theme-toggle:hover img {
+    transform: rotate(90deg);
+}
+
+/* Optional: keyboard users also get the effect */
+#theme-toggle:focus-visible img {
+    transform: rotate(90deg);
+}
+
+/* Screens */
+section {
+    background: var(--bg-card);
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.9rem;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+    border: 1px solid var(--border);
+}
+
+h1,
+h2 {
+    margin-top: 0;
+}
+
+.screen {
+    display: none;
+}
+
+.screen.active {
+    display: block;
+}
+
+/* Home grid of buttons */
+.home-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+/* Nicer home buttons */
+.home-button {
+    padding: 1rem;
+    border-radius: 0.9rem;
+    border: 1px solid var(--border);
+    background: var(--home-btn-bg-soft);
+    color: var(--text);
+    font-size: 0.95rem;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
+    transition: transform 0.08s ease-out, box-shadow 0.08s ease-out, background 0.12s;
+}
+
+.home-button:active {
+    transform: scale(0.97);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.3);
+}
+
+/* Back button */
+.back-home {
+    width: 100%;
+    padding: 0.6rem;
+    margin-bottom: 0.75rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--border);
+    background: #e5e7eb;
+    color: #111827;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+/* Form fields */
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+input {
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.25rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text);
+    box-sizing: border-box;
+}
+
+/* Main action button (ABV etc.) */
+#abv-btn {
+    width: 100%;
+    padding: 0.8rem;
+    margin-top: 0.75rem;
+    border: none;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--accent);
+    color: var(--accent-text);
+    box-shadow: 0 3px 8px rgba(34, 197, 94, 0.35);
+}
+
+#abv-btn:active {
+    transform: scale(0.97);
+}
+
+#abv-output {
+    margin-top: 2rem;
+    text-align: center;
+    font-weight: 700;
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
+    /* responsive bigger text */
+}
+
+.Calculate_buttons {
+    width: 100%;
+    padding: 0.8rem;
+    margin-top: 0.75rem;
+    border: none;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--accent);
+    color: var(--accent-text);
+    box-shadow: 0 3px 8px rgba(34, 197, 94, 0.35);
+}
+
+.Calculate_buttons:active {
+    transform: scale(0.97);
+}
+
+
+/* invert gear in dark mode so it shows on dark background */
+body.theme-dark #theme-toggle img {
+    filter: invert(1);
+}
+
+/* Settings row: label + switch */
+.settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 0.75rem;
+    padding-top: 0.5rem;
+}
+
+/* Toggle switch style (like iOS) */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 46px;
+    height: 26px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #d1d5db;
+    /* grey track */
+    border-radius: 999px;
+    transition: 0.2s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px;
+    width: 20px;
+    left: 3px;
+    top: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.2s;
+}
+
+/* when checked (dark mode ON) */
+.switch input:checked+.slider {
+    background-color: #2563eb;
+    /* blue track */
+}
+
+.switch input:checked+.slider:before {
+    transform: translateX(20px);
+}
+
+/* Dark mode overrides for home buttons */
+body.theme-dark .home-button {
+    background: #1f2937;
+    /* darker button background */
+    color: #f9fafb;
+    /* light text */
+    border-color: #374151;
+    /* softer border */
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* Slight color pop when pressing */
+body.theme-dark .home-button:active {
+    background: #111827;
+    transform: scale(0.97);
+}
+
+/* Make the back button match too */
+body.theme-dark .back-home {
+    background: #374151;
+    color: #f9fafb;
+    border-color: #4b5563;
+}
+
+/* Dark-mode style for all text/number inputs */
+body.theme-dark input {
+    background: #0f172a;
+    /* dark surface */
+    color: #f9fafb;
+    /* light text */
+    border-color: #374151;
+    /* subtle border */
+}
+
+/* optional: placeholder text colour */
+body.theme-dark input::placeholder {
+    color: #9ca3af;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0 1rem;
+    font-size: 0.9rem;
+}
+
+.data-table th,
+.data-table td {
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.honey-form {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+@media (min-width: 520px) {
+    .honey-form {
+        grid-template-columns: 1.4fr repeat(4, 1fr) auto;
+    }
+}
+
+/* Make empty tables visibly tall enough */
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    min-height: 120px;
+    /* makes the area taller even if empty */
+}
+
+/* Dark-mode tweak for table */
+body.theme-dark .data-table th,
+body.theme-dark .data-table td {
+    border-bottom-color: #374151;
+}
+
+.delete-btn {
+    background: #ef4444;
+    /* red */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+.delete-btn:hover {
+    background: #dc2626;
+}
+
+body.theme-dark .delete-btn {
+    background: #b91c1c;
+}
+
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto;
+    /* allow sideways scroll on small screens */
+}
+
+.data-table {
+    width: 100%;
+    height: 20%;
+    border-collapse: collapse;
+    margin: 0.5rem 0 1rem;
+    font-size: 0.9rem;
+    min-width: 650px;
+    /* enough width for all 5 columns */
+}
+
+
+.charts-wrap {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 14px;
+}
+
+.chart-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 18px;
+    padding: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    height: 260px;
+}
+
+.chart-title {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.chart-card canvas {
+    width: 100% !important;
+    height: calc(100% - 30px) !important;
+}
+
+
+/* Make checkboxes not behave like full-width inputs */
+input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+/* Nice inline checkbox row */
+.checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.75rem 0;
+}
+
+.checkbox-row label {
+    margin: 0;
+}
+
+select {
+    width: 100%;
+    padding: 0.6rem;
+    margin-top: 0.25rem;
+    border-radius: 0.6rem;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    color: var(--text);
+    box-sizing: border-box;
+}
+
+body.theme-dark select {
+    background: #0f172a;
+    color: #f9fafb;
+    border-color: #374151;
+}
