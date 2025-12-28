@@ -7,6 +7,7 @@ export const Y_XS = 0.1;
 export const MW_CO2 = 44.01;
 export const MW_ETH = 46.069;
 export const RHO_ETH = 789.45;
+export const RHO_WATER = 998.00; // TO BE CHANGED WHEN BACK HOME!!!!!!!!!!!!!!!!!
 export const FRACTION_FERMENTABLE = 0.925;
 
 // ---- ABV + OG helpers ----
