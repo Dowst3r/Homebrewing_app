@@ -33,10 +33,26 @@ export function abvHmrc(og, fg) {
 }
 
 // Solve for OG given target ABV (%) and final gravity (SG)
+// Solve for OG given target ABV (%) and final gravity (SG)
 export function ogForTargetAbv(fgSg, abvTarget) {
-  const fg = Number(fgSg);
-  const abv = Number(abvTarget);
-  return (abv * A0 + fg) / (1 + abv * A1);
+  const FG = Number(fgSg);
+  const ABV = Number(abvTarget);
+
+  // 1. Convert ABV back to Alcohol by Weight (ABW)
+  // Logic: ABV = ABW * (FG / 0.7907)
+  const ABW = ABV * (0.7907 / FG);
+
+  // 2. Calculate AE (Apparent Extract in Plato) from FG
+  const AE = platoFromSgLincoln(FG);
+
+  // 3. Solve for OE (Original Extract in Plato)
+  // Derived from: ABW = (0.8192 * (OE - AE)) / (2.0665 - 0.010665 * OE)
+  const OE = (2.0665 * ABW + 0.8192 * AE) / (0.8192 + 0.010665 * ABW);
+
+  // 4. Convert Plato back to SG (Specific Gravity)
+  // Derived from the Lincoln Plato equation: P = (258.6 * s) / (1 + LINCOLN_B * s)
+  const s = OE / (258.6 - LINCOLN_B * OE);
+  return s + 1;
 }
 
 // ---- Brix estimate from SG ----
