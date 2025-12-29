@@ -207,6 +207,18 @@ input {
     transform: scale(0.97);
 }
 
+pre {
+    white-space: pre-wrap;
+    /* Magic fix: tells the browser to wrap the text */
+    word-wrap: break-word;
+    /* Ensures long strings of numbers/letters break */
+    background: var(--bg-card);
+    /* Optional: makes it look like a clean results box */
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
 
 /* invert gear in dark mode so it shows on dark background */
 body.theme-dark #theme-toggle img {
