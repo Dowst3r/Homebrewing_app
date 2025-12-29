@@ -355,16 +355,33 @@ if (meadBtn) {
         text += `Estimated cost: ${money(r.cost)}\n`;
         text += `Volume of water to add: ${fmt(r.waterVolumeL, 2)} L\n`;
 
-        if (r.fermaidOGramsTotal != null && Number.isFinite(r.fermaidOGramsPerDay)) {
-            text += `\n--- Fermaid-O Nutrient Addition ---\n`;
-            text += `Fermaid-O Required: ${fmt(r.fermaidOGramsPerDay, 2)} g on day 0\n`;
-            text += `Fermaid-O Required: ${fmt(r.fermaidOGramsPerDay, 2)} g on day 1\n`;
-            text += `Fermaid-O Required: ${fmt(r.fermaidOGramsPerDay, 2)} g on day 2\n`;
-            text += `Fermaid-O Required: ${fmt(r.fermaidOGramsPerDay, 2)} g on day 3\n`;
-            text += `This is all the nutrient that is required!\n`;
+        // --- Yeast nutrients ---
+        const hasO = (r.fermaidOGramsTotal != null) && Number.isFinite(r.fermaidOGramsPerDay);
+        const hasK = (r.fermaidKGramsTotal != null) && Number.isFinite(r.fermaidKGramsTotal);
+
+        if (hasO || hasK) {
+            text += `\n--- Yeast Nutrient Additions ---\n`;
+
+            // ABV > 14 path: Fermaid-K is used + Fermaid-O is still split
+            if (hasK) {
+                text += `Fermaid-K Required: ${fmt(r.fermaidKGramsTotal, 2)} g at 1/3 sugar break\n`;
+            }
+
+            // Fermaid-O schedule (your existing timing)
+            if (hasO) {
+                text += `Fermaid-O Required: ${fmt(r.fermaidOGramsPerDay, 2)} g 24 hours (1 day) after start of fermentation\n`;
+                text += `Fermaid-O Required: ${fmt(r.fermaidOGramsPerDay, 2)} g 48 hours (2 days) after start of fermentation\n`;
+                text += `Fermaid-O Required: ${fmt(r.fermaidOGramsPerDay, 2)} g 72 hours (3 days) after start of fermentation\n`;
+                text += `Fermaid-O Required: ${fmt(r.fermaidOGramsPerDay, 2)} g 168 hours (7 days) after start of fermentation or after 1/3 sugar break\n`;
+            }
+
+            if (Number.isFinite(r.thirdsugarbreak)) {
+                text += `1/3 sugar break: ${fmt(r.thirdsugarbreak, 3)}\n`;
+            }
         } else {
-            text += `\n(Fermaid-O calculation disabled when ABV > 14%)\n`;
+            text += `\n(Yeast nutrient calculation unavailable for the current inputs.)\n`;
         }
+
 
         text += `\n--- Honey for Back-Sweetening ---\n`;
         text += `Back-Sweetening Target FG: ${fmt(finalGravity, 3)}\n`;

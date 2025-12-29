@@ -1,22 +1,35 @@
 // ---- Shared constants ----
-export const A0 = 0.0102939642333984375;
-export const A1 = 0.0026341854919339838;
+export const LINCOLN_B = 2271 / 2582;
 
 export const F_SP = 0.0128;
 export const Y_XS = 0.1;
 export const MW_CO2 = 44.01;
 export const MW_ETH = 46.069;
 export const RHO_ETH = 789.45;
+export const RHO_WATER = 998.00; // TO BE CHANGED WHEN BACK HOME!!!!!!!!!!!!!!!!! SG of water at T room and multiply by reference density
 export const FRACTION_FERMENTABLE = 0.925;
 
 // ---- ABV + OG helpers ----
 
-// HMRC-style ABV (%), OG/FG in 1.xxx SG
-export function abvHmrc(ogSg, fgSg) {
-  const og = Number(ogSg);
-  const fg = Number(fgSg);
-  const denom = A0 - A1 * og;
-  return (og - fg) / denom;
+function platoFromSgLincoln(sg) {
+  const SG = Number(sg);
+  const s = SG - 1;
+  return (258.6 * s) / (1 + LINCOLN_B * s);
+}
+
+
+// ASBC Beer-4A-style ABV (%), OG/FG in 1.xxx SG
+export function abvHmrc(og, fg) {
+  const OG = Number(og);
+  const FG = Number(fg);
+
+  const OE = platoFromSgLincoln(OG);
+  const AE = platoFromSgLincoln(FG);
+
+  const ABW = (0.8192 * (OE - AE)) / (2.0665 - 0.010665 * OE);
+
+  const ABV = ABW * (FG / 0.7907);
+  return ABV;
 }
 
 // Solve for OG given target ABV (%) and final gravity (SG)
@@ -92,6 +105,8 @@ export function calculateMeadRecipe({
   // Fermaid-O (only if ABV <= 14%)
   let fermaidOGramsTotal = null;
   let fermaidOGramsPerDay = null;
+  let fermaidKGramsTotal = null;
+  let thirdsugarbreak = null;
 
   if (ABV <= 14) {
     const nitrogenFactors = {
@@ -102,7 +117,30 @@ export function calculateMeadRecipe({
     const NReq = nitrogenFactors[yeastNRequirement] ?? 0.9;
     const volumeUsGallons = V / 3.78541;
     fermaidOGramsTotal = ((brix * 10) * NReq * volumeUsGallons) / 50;
-    fermaidOGramsPerDay = fermaidOGramsTotal / 4; // 4 days
+    fermaidOGramsPerDay = fermaidOGramsTotal / 4; // spread across 4 days
+    thirdsugarbreak = startingGravity - ((startingGravity - 1) / 3)
+  } else {
+    const yanFactors = {
+      Low: 7.5,
+      Medium: 9.0,
+      High: 12.5,
+    };
+
+    const yanPerBrix = yanFactors[yeastNRequirement] ?? 9.0;
+
+    const YANtarget = yanPerBrix * brix;
+
+    const p = 0.35;
+
+    const FERMAID_K_CONTRIB = 100;
+    const FERMAID_O_CONTRIB = 40;
+
+    fermaidKGramsTotal = (p * YANtarget * V) / FERMAID_K_CONTRIB;
+    fermaidOGramsTotal = ((1 - p) * YANtarget * V) / FERMAID_O_CONTRIB;
+
+    fermaidOGramsPerDay = fermaidOGramsTotal / 4;
+
+    thirdsugarbreak = startingGravity - ((startingGravity - 1) / 3);
   }
 
   // Back-sweetening part (using FG vs 1.000 like in your Python)
@@ -133,9 +171,11 @@ export function calculateMeadRecipe({
     honeyMassKg: totalHoneyKg,
     honeyVolumeL: volumeHoneyL,
     cost,                            // £
-    waterVolumeL: V - volumeHoneyL,
+    waterVolumeL: (startingGravity * V - (totalHoneyKg / (RHO_WATER / 1000))),
     fermaidOGramsTotal,
     fermaidOGramsPerDay,
+    fermaidKGramsTotal,
+    thirdsugarbreak,
     // back-sweetening bits
     imaginaryAbvForDesiredFinalSweetness,
     massPureSugarNeededForSweetening,
