@@ -335,7 +335,8 @@ if (meadBtn) {
         const sugarConcPct = Number(honey.sugar);
 
         // Convert bottle cost -> £ per 100 g (this is what your Python uses as cost_per_100g)
-        const costPer100g = (Number(honey.price) * 100) / Number(honey.mass);
+        const pricePerContainer = Number(honey.price);
+        const massPerContainerG = Number(honey.mass);
 
         const yeastName = (meadYeastSelect?.value || '').trim();
         const yeast = yeastDb.find(y => y.name.toLowerCase() === yeastName.toLowerCase());
@@ -353,7 +354,8 @@ if (meadBtn) {
             finalGravity,
             targetAbv,
             sugarConcPct,
-            costPer100g,
+            pricePerContainer,
+            massPerContainerG,
             yeastNRequirement,
         });
 
@@ -372,6 +374,7 @@ if (meadBtn) {
 
         text += `Total pure sugar needed: ${fmt(r.totalSugarNeeded, 1)} g\n`;
         text += `Honey required: ${fmt(r.honeyMassGrams, 2)} g\n`;
+        text += `Honey containers required: ${fmt(r.containers, 1)}\n`;
         text += `Estimated cost: ${money(r.cost)}\n`;
         text += `Volume of water to add: ${fmt(r.waterVolumeL, 2)} L\n`;
 

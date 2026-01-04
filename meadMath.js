@@ -75,14 +75,16 @@ export function calculateMeadRecipe({
   finalGravity,        // FG (SG)
   targetAbv,           // % ABV
   sugarConcPct,        // honey sugar % (e.g. 79.7)
-  costPer100g,         // £ per 100 g honey
+  pricePerContainer,   // £ per container of honey
+  massPerContainerG,   // g per container of honey
   yeastNRequirement,   // "Low" | "Medium" | "High"
 }) {
   const V = Number(volumeL);
   const FG = Number(finalGravity);
   const ABV = Number(targetAbv);
   const sugarConc = Number(sugarConcPct);        // %
-  const cost100 = Number(costPer100g);
+  const costcontainer = Number(pricePerContainer);
+  const masscontainer = Number(massPerContainerG);
 
   // Starting gravity from OG/ABV relationship
   const startingGravity = ogForTargetAbv(FG, ABV);
@@ -98,7 +100,7 @@ export function calculateMeadRecipe({
 
   let testMassHoney = 0;
   let totalHoneyKg = 0;
-  let volumeHoneyL = 0;
+  let containers = 0;
   let cost = 0;
 
   if (sugarConc > 0) {
@@ -110,7 +112,8 @@ export function calculateMeadRecipe({
       FRACTION_FERMENTABLE;
 
     totalHoneyKg = testMassHoney / 1000;
-    cost = (testMassHoney / 100) * cost100;
+    containers = Math.ceil((testMassHoney / masscontainer));
+    cost = containers * costcontainer;
   }
 
   const brix = brixFromSg(startingGravity);
@@ -182,7 +185,8 @@ export function calculateMeadRecipe({
     totalSugarNeeded,                // g
     honeyMassGrams: totalHoneyKg * 1000,
     honeyMassKg: totalHoneyKg,
-    cost,                            // £
+    containers,
+    cost,
     waterVolumeL: (startingGravity * V - (totalHoneyKg / (RHO_WATER / 1000))),
     fermaidOGramsTotal,
     fermaidOGramsPerDay,
