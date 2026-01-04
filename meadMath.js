@@ -1,30 +1,58 @@
 // ---- Shared constants ----
-export const A0 = 0.0102939642333984375;
-export const A1 = 0.0026341854919339838;
+export const LINCOLN_B = 2271 / 2582;
 
 export const F_SP = 0.0128;
 export const Y_XS = 0.1;
 export const MW_CO2 = 44.01;
 export const MW_ETH = 46.069;
 export const RHO_ETH = 789.45;
-export const RHO_WATER = 998.00; // TO BE CHANGED WHEN BACK HOME!!!!!!!!!!!!!!!!!
+export const RHO_WATER = 998.00; // TO BE CHANGED WHEN BACK HOME!!!!!!!!!!!!!!!!! SG of water at T room and multiply by reference density
 export const FRACTION_FERMENTABLE = 0.925;
 
 // ---- ABV + OG helpers ----
 
-// HMRC-style ABV (%), OG/FG in 1.xxx SG
-export function abvHmrc(ogSg, fgSg) {
-  const og = Number(ogSg);
-  const fg = Number(fgSg);
-  const denom = A0 - A1 * og;
-  return (og - fg) / denom;
+function platoFromSgLincoln(sg) {
+  const SG = Number(sg);
+  const s = SG - 1;
+  return (258.6 * s) / (1 + LINCOLN_B * s);
+}
+
+
+// ASBC Beer-4A-style ABV (%), OG/FG in 1.xxx SG
+export function abvHmrc(og, fg) {
+  const OG = Number(og);
+  const FG = Number(fg);
+
+  const OE = platoFromSgLincoln(OG);
+  const AE = platoFromSgLincoln(FG);
+
+  const ABW = (0.8192 * (OE - AE)) / (2.0665 - 0.010665 * OE);
+
+  const ABV = ABW * (FG / 0.7907);
+  return ABV;
 }
 
 // Solve for OG given target ABV (%) and final gravity (SG)
+// Solve for OG given target ABV (%) and final gravity (SG)
 export function ogForTargetAbv(fgSg, abvTarget) {
-  const fg = Number(fgSg);
-  const abv = Number(abvTarget);
-  return (abv * A0 + fg) / (1 + abv * A1);
+  const FG = Number(fgSg);
+  const ABV = Number(abvTarget);
+
+  // 1. Convert ABV back to Alcohol by Weight (ABW)
+  // Logic: ABV = ABW * (FG / 0.7907)
+  const ABW = ABV * (0.7907 / FG);
+
+  // 2. Calculate AE (Apparent Extract in Plato) from FG
+  const AE = platoFromSgLincoln(FG);
+
+  // 3. Solve for OE (Original Extract in Plato)
+  // Derived from: ABW = (0.8192 * (OE - AE)) / (2.0665 - 0.010665 * OE)
+  const OE = (2.0665 * ABW + 0.8192 * AE) / (0.8192 + 0.010665 * ABW);
+
+  // 4. Convert Plato back to SG (Specific Gravity)
+  // Derived from the Lincoln Plato equation: P = (258.6 * s) / (1 + LINCOLN_B * s)
+  const s = OE / (258.6 - LINCOLN_B * OE);
+  return s + 1;
 }
 
 // ---- Brix estimate from SG ----
@@ -47,7 +75,6 @@ export function calculateMeadRecipe({
   finalGravity,        // FG (SG)
   targetAbv,           // % ABV
   sugarConcPct,        // honey sugar % (e.g. 79.7)
-  densityKgPerM3,      // honey density (kg/m^3)
   costPer100g,         // £ per 100 g honey
   yeastNRequirement,   // "Low" | "Medium" | "High"
 }) {
@@ -55,7 +82,6 @@ export function calculateMeadRecipe({
   const FG = Number(finalGravity);
   const ABV = Number(targetAbv);
   const sugarConc = Number(sugarConcPct);        // %
-  const density = Number(densityKgPerM3);        // kg/m^3
   const cost100 = Number(costPer100g);
 
   // Starting gravity from OG/ABV relationship
@@ -84,7 +110,6 @@ export function calculateMeadRecipe({
       FRACTION_FERMENTABLE;
 
     totalHoneyKg = testMassHoney / 1000;
-    volumeHoneyL = totalHoneyKg / (density / 1000); // density kg/m^3 → kg/L
     cost = (testMassHoney / 100) * cost100;
   }
 
@@ -93,6 +118,8 @@ export function calculateMeadRecipe({
   // Fermaid-O (only if ABV <= 14%)
   let fermaidOGramsTotal = null;
   let fermaidOGramsPerDay = null;
+  let fermaidKGramsTotal = null;
+  let thirdsugarbreak = null;
 
   if (ABV <= 14) {
     const nitrogenFactors = {
@@ -103,7 +130,30 @@ export function calculateMeadRecipe({
     const NReq = nitrogenFactors[yeastNRequirement] ?? 0.9;
     const volumeUsGallons = V / 3.78541;
     fermaidOGramsTotal = ((brix * 10) * NReq * volumeUsGallons) / 50;
-    fermaidOGramsPerDay = fermaidOGramsTotal / 4; // 4 days
+    fermaidOGramsPerDay = fermaidOGramsTotal / 4; // spread across 4 days
+    thirdsugarbreak = startingGravity - ((startingGravity - 1) / 3)
+  } else {
+    const yanFactors = {
+      Low: 7.5,
+      Medium: 9.0,
+      High: 12.5,
+    };
+
+    const yanPerBrix = yanFactors[yeastNRequirement] ?? 9.0;
+
+    const YANtarget = yanPerBrix * brix;
+
+    const p = 0.35;
+
+    const FERMAID_K_CONTRIB = 100;
+    const FERMAID_O_CONTRIB = 40;
+
+    fermaidKGramsTotal = (p * YANtarget * V) / FERMAID_K_CONTRIB;
+    fermaidOGramsTotal = ((1 - p) * YANtarget * V) / FERMAID_O_CONTRIB;
+
+    fermaidOGramsPerDay = fermaidOGramsTotal / 4;
+
+    thirdsugarbreak = startingGravity - ((startingGravity - 1) / 3);
   }
 
   // Back-sweetening part (using FG vs 1.000 like in your Python)
@@ -132,11 +182,12 @@ export function calculateMeadRecipe({
     totalSugarNeeded,                // g
     honeyMassGrams: totalHoneyKg * 1000,
     honeyMassKg: totalHoneyKg,
-    honeyVolumeL: volumeHoneyL,
     cost,                            // £
-    waterVolumeL: V - volumeHoneyL,
+    waterVolumeL: (startingGravity * V - (totalHoneyKg / (RHO_WATER / 1000))),
     fermaidOGramsTotal,
     fermaidOGramsPerDay,
+    fermaidKGramsTotal,
+    thirdsugarbreak,
     // back-sweetening bits
     imaginaryAbvForDesiredFinalSweetness,
     massPureSugarNeededForSweetening,
@@ -182,27 +233,52 @@ export function calculateBacksweetening({
 
 // ---- pH adjustment (CaCO3) ----
 
+// ---- pH adjustment (database-driven) ----
 export function calculatePhAdjustment({
   currentPh,
   targetPh,
-  volumeL,     // L
+  volumeL,          // L
+  adjusterType,     // "acid" or "base"
+  hPlusPerMol,      // e.g. 2 for CaCO3, 3 for citric, 2 for malic/tartaric
+  molarMass,        // g/mol
 }) {
   const pHInitial = Number(currentPh);
   const pHTarget = Number(targetPh);
   const V = Number(volumeL);
 
-  const HInitial = 10 ** (-pHInitial);
-  const HTarget = 10 ** (-pHTarget);
+  const HInitial = 10 ** (-pHInitial); // mol/L
+  const HTarget = 10 ** (-pHTarget);  // mol/L
 
-  const deltaH = (HInitial - HTarget) * V * 1000;  // total mol of H+
-  const molCaCO3 = deltaH / 2;                     // consumes 2 H+
-  const massCaCO3 = molCaCO3 * 100.09;             // g
+  // positive means we need to ADD H+ (acid), negative means REMOVE H+ (base)
+  const deltaMolH = (HTarget - HInitial) * V; // mol
+
+  const need = deltaMolH > 0 ? "acid" : (deltaMolH < 0 ? "base" : "none");
+  const molHNeeded = Math.abs(deltaMolH);
+
+  const stoich = Number(hPlusPerMol);
+  const mw = Number(molarMass);
+
+  if (!Number.isFinite(stoich) || stoich <= 0) {
+    return { error: "Invalid H+ per mol (stoichiometry) for this adjuster." };
+  }
+  if (!Number.isFinite(mw) || mw <= 0) {
+    return { error: "Invalid molar mass for this adjuster." };
+  }
+
+  // If user picked the wrong type (e.g. acid when pH must be raised), warn.
+  const mismatch = (need !== "none" && adjusterType !== need);
+
+  const molCompound = (need === "none") ? 0 : (molHNeeded / stoich);
+  const massG = molCompound * mw;
 
   return {
     HInitial,
     HTarget,
-    deltaH,
-    molCaCO3,
-    massCaCO3,
+    deltaMolH,
+    need,
+    mismatch,
+    molHNeeded,
+    molCompound,
+    massG,
   };
 }
