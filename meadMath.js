@@ -75,7 +75,6 @@ export function calculateMeadRecipe({
   finalGravity,        // FG (SG)
   targetAbv,           // % ABV
   sugarConcPct,        // honey sugar % (e.g. 79.7)
-  densityKgPerM3,      // honey density (kg/m^3)
   costPer100g,         // £ per 100 g honey
   yeastNRequirement,   // "Low" | "Medium" | "High"
 }) {
@@ -83,7 +82,6 @@ export function calculateMeadRecipe({
   const FG = Number(finalGravity);
   const ABV = Number(targetAbv);
   const sugarConc = Number(sugarConcPct);        // %
-  const density = Number(densityKgPerM3);        // kg/m^3
   const cost100 = Number(costPer100g);
 
   // Starting gravity from OG/ABV relationship
@@ -112,7 +110,6 @@ export function calculateMeadRecipe({
       FRACTION_FERMENTABLE;
 
     totalHoneyKg = testMassHoney / 1000;
-    volumeHoneyL = totalHoneyKg / (density / 1000); // density kg/m^3 → kg/L
     cost = (testMassHoney / 100) * cost100;
   }
 
@@ -185,7 +182,6 @@ export function calculateMeadRecipe({
     totalSugarNeeded,                // g
     honeyMassGrams: totalHoneyKg * 1000,
     honeyMassKg: totalHoneyKg,
-    honeyVolumeL: volumeHoneyL,
     cost,                            // £
     waterVolumeL: (startingGravity * V - (totalHoneyKg / (RHO_WATER / 1000))),
     fermaidOGramsTotal,
@@ -237,27 +233,52 @@ export function calculateBacksweetening({
 
 // ---- pH adjustment (CaCO3) ----
 
+// ---- pH adjustment (database-driven) ----
 export function calculatePhAdjustment({
   currentPh,
   targetPh,
-  volumeL,     // L
+  volumeL,          // L
+  adjusterType,     // "acid" or "base"
+  hPlusPerMol,      // e.g. 2 for CaCO3, 3 for citric, 2 for malic/tartaric
+  molarMass,        // g/mol
 }) {
   const pHInitial = Number(currentPh);
   const pHTarget = Number(targetPh);
   const V = Number(volumeL);
 
-  const HInitial = 10 ** (-pHInitial);
-  const HTarget = 10 ** (-pHTarget);
+  const HInitial = 10 ** (-pHInitial); // mol/L
+  const HTarget = 10 ** (-pHTarget);  // mol/L
 
-  const deltaH = (HInitial - HTarget) * V * 1000;  // total mol of H+
-  const molCaCO3 = deltaH / 2;                     // consumes 2 H+
-  const massCaCO3 = molCaCO3 * 100.09;             // g
+  // positive means we need to ADD H+ (acid), negative means REMOVE H+ (base)
+  const deltaMolH = (HTarget - HInitial) * V; // mol
+
+  const need = deltaMolH > 0 ? "acid" : (deltaMolH < 0 ? "base" : "none");
+  const molHNeeded = Math.abs(deltaMolH);
+
+  const stoich = Number(hPlusPerMol);
+  const mw = Number(molarMass);
+
+  if (!Number.isFinite(stoich) || stoich <= 0) {
+    return { error: "Invalid H+ per mol (stoichiometry) for this adjuster." };
+  }
+  if (!Number.isFinite(mw) || mw <= 0) {
+    return { error: "Invalid molar mass for this adjuster." };
+  }
+
+  // If user picked the wrong type (e.g. acid when pH must be raised), warn.
+  const mismatch = (need !== "none" && adjusterType !== need);
+
+  const molCompound = (need === "none") ? 0 : (molHNeeded / stoich);
+  const massG = molCompound * mw;
 
   return {
     HInitial,
     HTarget,
-    deltaH,
-    molCaCO3,
-    massCaCO3,
+    deltaMolH,
+    need,
+    mismatch,
+    molHNeeded,
+    molCompound,
+    massG,
   };
 }

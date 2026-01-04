@@ -1,26 +1,50 @@
-import { abvHmrc, calculateMeadRecipe } from './meadMath.js';
+import { abvHmrc, calculateMeadRecipe, calculatePhAdjustment } from './meadMath.js';
 
 // ----- THEME HANDLING -----
 
 const body = document.body;
 const settingsButton = document.getElementById('theme-toggle');
 const darkModeCheckbox = document.getElementById('dark-mode-toggle');
+const pinkModeCheckbox = document.getElementById('pink-mode-toggle');
 
 function setTheme(theme) {
-    if (theme === 'dark') {
-        body.classList.add('theme-dark');
-    } else {
-        body.classList.remove('theme-dark');
-    }
+    body.classList.remove('theme-dark', 'theme-pink');
+
+    if (theme === 'dark') body.classList.add('theme-dark');
+    else if (theme === 'pink') body.classList.add('theme-pink');
+
     localStorage.setItem('theme', theme);
-    if (darkModeCheckbox) {
-        darkModeCheckbox.checked = theme === 'dark';
-    }
+
+    if (darkModeCheckbox) darkModeCheckbox.checked = theme === 'dark';
+    if (pinkModeCheckbox) pinkModeCheckbox.checked = theme === 'pink';
+    window.dispatchEvent(new CustomEvent("themechange", { detail: { theme } }));
 }
+
+
+
+
+
+darkModeCheckbox.addEventListener('change', () => {
+    if (darkModeCheckbox.checked) {
+        if (pinkModeCheckbox) pinkModeCheckbox.checked = false;
+        setTheme('dark');
+    } else {
+        setTheme('light');
+    }
+});
+
+pinkModeCheckbox.addEventListener('change', () => {
+    if (pinkModeCheckbox.checked) {
+        if (darkModeCheckbox) darkModeCheckbox.checked = false;
+        setTheme('pink');
+    } else {
+        setTheme('light');
+    }
+});
 
 // Load saved theme (or default to light)
 const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'dark' || savedTheme === 'light') {
+if (savedTheme === 'dark' || savedTheme === 'pink') {
     setTheme(savedTheme);
 } else {
     setTheme('light');
@@ -54,6 +78,13 @@ function showScreen(id) {
 
     if (id === "screen-yeast-database") {
         renderYeastTable();
+    }
+
+    if (id === "screen-ph") {
+        fillPhDropdown();
+    }
+    if (id === "screen-pH-database") {
+        renderPhTable();
     }
 
 }
@@ -109,7 +140,6 @@ if (abvBtn) {
 
 const honeyTableBody = document.getElementById('honey-table-body');
 const honeyNameInput = document.getElementById('honey-name-input');
-const honeyDensityInput = document.getElementById('honey-density-input');
 const honeySugarInput = document.getElementById('honey-sugar-input');
 const honeyPriceInput = document.getElementById('honey-price-bottle-input');
 const honeyMassInput = document.getElementById('honey-mass-bottle-input')
@@ -117,10 +147,10 @@ const honeyAddBtn = document.getElementById('honey-add-btn');
 
 // Default entries
 const defaultHoneyDb = [
-    { name: 'Runny honey Lidl', density: 1376.4, sugar: 79.7, price: 1.59, mass: 400 },
-    { name: 'Clear honey Lidl', density: 1353.5, sugar: 79.7, price: 1.69, mass: 500 },
-    { name: 'Generic honey', density: 1400, sugar: 80, price: 1.49, mass: 300 },
-    { name: 'Runny honey Rowse', density: 1374.8, sugar: 80.8, price: 5, mass: 720 }
+    { name: 'Runny honey Lidl', sugar: 79.7, price: 1.59, mass: 400 },
+    { name: 'Clear honey Lidl', sugar: 79.7, price: 1.69, mass: 500 },
+    { name: 'Generic honey', sugar: 80, price: 1.49, mass: 300 },
+    { name: 'Runny honey Rowse', sugar: 80.8, price: 5, mass: 720 }
 ];
 
 function loadHoneyDb() {
@@ -137,14 +167,12 @@ function loadHoneyDb() {
         const cleaned = parsed
             .map((x) => ({
                 name: String(x?.name ?? '').trim(),
-                density: Number(x?.density),
                 sugar: Number(x?.sugar),
                 price: Number(x?.price),
                 mass: Number(x?.mass),
             }))
             .filter((x) =>
                 x.name &&
-                Number.isFinite(x.density) &&
                 Number.isFinite(x.sugar) &&
                 Number.isFinite(x.price) &&
                 Number.isFinite(x.mass)
@@ -173,9 +201,6 @@ function renderHoneyTable() {
         const tdName = document.createElement('td');
         tdName.textContent = entry.name;
 
-        const tdDensity = document.createElement('td');
-        tdDensity.textContent = entry.density.toString();
-
         const tdSugar = document.createElement('td');
         tdSugar.textContent = entry.sugar.toString();
 
@@ -202,7 +227,6 @@ function renderHoneyTable() {
 
         tdDelete.appendChild(delBtn);
         tr.appendChild(tdName);
-        tr.appendChild(tdDensity);
         tr.appendChild(tdSugar);
         tr.appendChild(tdPrice);
         tr.appendChild(tdMass);
@@ -216,23 +240,21 @@ function renderHoneyTable() {
 if (honeyAddBtn) {
     honeyAddBtn.addEventListener('click', () => {
         const name = (honeyNameInput.value || '').trim();
-        const density = parseFloat(honeyDensityInput.value);
         const sugar = parseFloat(honeySugarInput.value);
         const price = parseFloat(honeyPriceInput.value);
         const mass = parseFloat(honeyMassInput.value);
 
-        if (!name || Number.isNaN(density) || Number.isNaN(sugar) || Number.isNaN(price) || Number.isNaN(mass)) {
-            alert('Please fill in name, density, sugar, price and mass.');
+        if (!name || Number.isNaN(sugar) || Number.isNaN(price) || Number.isNaN(mass)) {
+            alert('Please fill in name, sugar, price and mass.');
             return;
         }
 
-        honeyDb.push({ name, density, sugar, price, mass });
+        honeyDb.push({ name, sugar, price, mass });
         saveHoneyDb();
         renderHoneyTable();
         fillHoneyDropdown();
 
         honeyNameInput.value = '';
-        honeyDensityInput.value = '';
         honeySugarInput.value = '';
         honeyPriceInput.value = '';
         honeyMassInput.value = '';
@@ -311,7 +333,6 @@ if (meadBtn) {
         // Your honeyDb stores:
         // density: kg/m^3, sugar: %, price: £ per bottle, mass: g per bottle 
         const sugarConcPct = Number(honey.sugar);
-        const densityKgPerM3 = Number(honey.density);
 
         // Convert bottle cost -> £ per 100 g (this is what your Python uses as cost_per_100g)
         const costPer100g = (Number(honey.price) * 100) / Number(honey.mass);
@@ -332,7 +353,6 @@ if (meadBtn) {
             finalGravity,
             targetAbv,
             sugarConcPct,
-            densityKgPerM3,
             costPer100g,
             yeastNRequirement,
         });
@@ -532,10 +552,180 @@ if (yeastAddBtn) {
     });
 }
 
+// ----- pH ADJUSTER DATABASE -----
+
+const phTableBody = document.getElementById("ph-adjuster-table-body");
+const phNameInput = document.getElementById("ph-name-input");
+const phTypeInput = document.getElementById("ph-type-input");
+const phHPerMolInput = document.getElementById("ph-hplus-per-mol-input");
+const phMolarMassInput = document.getElementById("ph-molar-mass-input");
+const phNotesInput = document.getElementById("ph-notes-input");
+const phAddBtn = document.getElementById("ph-add-btn");
+
+const phSelect = document.getElementById("ph_adjuster_select");
+const phCalcBtn = document.getElementById("ph-calc-btn");
+const phOutput = document.getElementById("ph-output");
+
+const defaultPhDb = [
+    { name: "Calcium carbonate (CaCO₃)", type: "base", hPerMol: 2, molarMass: 100.09, notes: "Raises pH" },
+    { name: "Citric acid", type: "acid", hPerMol: 3, molarMass: 192.12, notes: "Citrus/lemony" },
+    { name: "Malic acid", type: "acid", hPerMol: 2, molarMass: 134.09, notes: "Green apple acidity" },
+    { name: "Tartaric acid", type: "acid", hPerMol: 2, molarMass: 150.09, notes: "Grape-like acidity" },
+];
+
+let phDb = [];
+
+function savePhDb() {
+    localStorage.setItem("phAdjusterDb", JSON.stringify(phDb));
+}
+
+function loadPhDb() {
+    try {
+        const raw = localStorage.getItem("phAdjusterDb");
+        if (!raw) {
+            phDb = defaultPhDb.slice();
+            savePhDb();
+            return;
+        }
+        const parsed = JSON.parse(raw);
+        phDb = Array.isArray(parsed) ? parsed : defaultPhDb.slice();
+    } catch {
+        phDb = defaultPhDb.slice();
+        savePhDb();
+    }
+}
+
+function renderPhTable() {
+    if (!phTableBody) return;
+    phTableBody.innerHTML = "";
+
+    phDb.forEach((a, idx) => {
+        const tr = document.createElement("tr");
+
+        const tdName = document.createElement("td");
+        tdName.textContent = a.name;
+
+        const tdType = document.createElement("td");
+        tdType.textContent = a.type;
+
+        const tdStoich = document.createElement("td");
+        tdStoich.textContent = String(a.hPerMol);
+
+        const tdMW = document.createElement("td");
+        tdMW.textContent = String(a.molarMass);
+
+        const tdNotes = document.createElement("td");
+        tdNotes.textContent = a.notes || "";
+
+        const tdDel = document.createElement("td");
+        const btn = document.createElement("button");
+        btn.textContent = "✕";
+        btn.className = "delete-btn";
+        btn.title = "Delete this pH adjuster";
+        btn.addEventListener("click", () => {
+            phDb.splice(idx, 1);
+            savePhDb();
+            renderPhTable();
+            fillPhDropdown();
+        });
+        tdDel.appendChild(btn);
+
+        tr.append(tdName, tdType, tdStoich, tdMW, tdNotes, tdDel);
+        phTableBody.appendChild(tr);
+    });
+}
+
+function fillPhDropdown() {
+    if (!phSelect) return;
+    phSelect.innerHTML = "";
+    phDb.forEach((a, idx) => {
+        const opt = document.createElement("option");
+        opt.value = String(idx);
+        opt.textContent = a.name;
+        phSelect.appendChild(opt);
+    });
+}
+
+if (phAddBtn) {
+    phAddBtn.addEventListener("click", () => {
+        const name = (phNameInput?.value || "").trim();
+        const type = (phTypeInput?.value || "acid").trim();
+        const hPerMol = Number(phHPerMolInput?.value);
+        const molarMass = Number(phMolarMassInput?.value);
+        const notes = (phNotesInput?.value || "").trim();
+
+        if (!name || !["acid", "base"].includes(type) || !Number.isFinite(hPerMol) || !Number.isFinite(molarMass)) {
+            alert("Fill name, type, H+ per mol, and molar mass.");
+            return;
+        }
+
+        phDb.push({ name, type, hPerMol, molarMass, notes });
+        savePhDb();
+        renderPhTable();
+        fillPhDropdown();
+
+        phNameInput.value = "";
+        phHPerMolInput.value = "";
+        phMolarMassInput.value = "";
+        phNotesInput.value = "";
+    });
+}
+
+if (phCalcBtn) {
+    phCalcBtn.addEventListener("click", () => {
+        const currentPh = Number(document.getElementById("starting_pH")?.value);
+        const targetPh = Number(document.getElementById("desired_pH")?.value);
+        const volumeL = Number(document.getElementById("ph_volume_l")?.value);
+
+        const idx = Number(phSelect?.value);
+        const adj = phDb[idx];
+
+        if (!adj || !Number.isFinite(currentPh) || !Number.isFinite(targetPh) || !Number.isFinite(volumeL)) {
+            alert("Check pH inputs, volume, and selected adjuster.");
+            return;
+        }
+
+        const r = calculatePhAdjustment({
+            currentPh,
+            targetPh,
+            volumeL,
+            adjusterType: adj.type,
+            hPlusPerMol: adj.hPerMol,
+            molarMass: adj.molarMass,
+        });
+
+        if (r.error) {
+            phOutput.textContent = `Error: ${r.error}`;
+            return;
+        }
+
+        const mismatchMsg = r.mismatch
+            ? `\n⚠ You selected a ${adj.type}, but the pH change required needs a ${r.need}.`
+            : "";
+
+        phOutput.textContent =
+            `Adjuster: ${adj.name}\n` +
+            `Start pH: ${currentPh}\nTarget pH: ${targetPh}\nVolume: ${volumeL} L\n\n` +
+            `Need: ${r.need}\n` +
+            `Moles H+ change: ${r.molHNeeded.toExponential(3)} mol\n` +
+            `Moles adjuster: ${r.molCompound.toExponential(3)} mol\n` +
+            `Mass required: ${r.massG.toFixed(3)} g` +
+            mismatchMsg +
+            `\n\nNote: This is a theoretical estimate; real must buffering means add in small steps and re-measure.`;
+    });
+}
+
+
+
+
+
 // Initial render (safe even if screen isn't visible yet)
 renderYeastTable();
 
 // Render on load
 renderHoneyTable();
 fillHoneyDropdown();
+loadPhDb();
+renderPhTable();
+fillPhDropdown();
 fillYeastDropdown();

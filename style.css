@@ -220,6 +220,50 @@ pre {
 }
 
 
+
+/* Make headings pop in pink mode */
+body.theme-pink h1,
+body.theme-pink h2 {
+    color: var(--accent);
+}
+
+
+body.theme-pink {
+    --bg: #fff0f6;
+    --bg-card: #ffe4f1;
+    --text: #3b0a2a;
+    --accent: #ec4899;
+    --accent-text: #ffffff;
+    --border: #fbcfe8;
+    --home-btn-bg: #831843;
+    --home-btn-bg-soft: #ffd1e8;
+    --chart-accent: #ec4899;
+}
+
+body.theme-pink .back-home {
+    background: #ffd1e8;
+    color: var(--accent);
+    border-color: var(--border);
+    font-weight: 700;
+}
+
+body.theme-pink .home-button {
+    background: #ffd1e8;
+    color: var(--accent);
+    border-color: var(--border);
+}
+
+body.theme-pink .home-button:active {
+    background: #fbcfe8;
+}
+
+body.theme-pink #theme-toggle img {
+    /* approximate #ec4899 */
+    filter: invert(33%) sepia(64%) saturate(2718%) hue-rotate(309deg) brightness(96%) contrast(95%);
+}
+
+
+
 /* invert gear in dark mode so it shows on dark background */
 body.theme-dark #theme-toggle img {
     filter: invert(1);
@@ -345,6 +389,31 @@ body.theme-dark input::placeholder {
         grid-template-columns: 1.4fr repeat(4, 1fr) auto;
     }
 }
+
+/* Make DB "Add" buttons look like your main action buttons, but compact */
+.honey-form button {
+    border: none;
+    border-radius: 0.75rem;
+    padding: 0.65rem 1rem;
+    font-size: 0.95rem;
+    height: 48px;
+    padding: 0 1rem;
+    align-self: center;
+    font-weight: 700;
+    cursor: pointer;
+
+    background: var(--accent);
+    color: var(--accent-text);
+
+    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.18);
+    justify-self: end;
+    /* keeps it looking like a proper button at the end */
+}
+
+.honey-form button:active {
+    transform: scale(0.97);
+}
+
 
 /* Make empty tables visibly tall enough */
 .table-wrapper {

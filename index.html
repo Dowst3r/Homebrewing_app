@@ -30,9 +30,9 @@
         <button class="home-button" data-target="screen-abv">ABV Calculator</button>
         <button class="home-button" data-target="screen-ph">pH Adjustment</button>
         <button class="home-button" data-target="screen-fermentation-tracking">Fermentation Tracking</button>
-        <button class="home-button" data-target="screen-honey-density">Honey Density</button>
         <button class="home-button" data-target="screen-honey-database">Honey Database</button>
         <button class="home-button" data-target="screen-yeast-database">Yeast Database</button>
+        <button class="home-button" data-target="screen-pH-database">pH Adjuster Database</button>
       </div>
     </section>
 
@@ -46,18 +46,14 @@
                 <input type="checkbox" id="dark-mode-toggle">
                 <span class="slider"></span>
             </label>
+            <span>Pretty pink</span>
+            <label class="switch">
+              <input type="checkbox" id="pink-mode-toggle">
+              <span class="slider"></span>
+            </label>
         </div>
     </section>
 
-
-
-
-
-
-
-
-
-    
     <section id="screen-mead-recipe" class="screen">
       <button class="back-home">← Home</button>
       <h2>Mead Recipe</h2>
@@ -111,29 +107,24 @@
       <button id="abv-btn" class="Calculate_buttons">Calculate ABV</button>
       <p id="abv-output"></p>
     </section>
-
-
-
-
-
-
-
-
-
-
-
     <!-- PLACEHOLDER SCREENS (you can fill these later) -->
     <section id="screen-ph" class="screen">
       <button class="back-home">← Home</button>
       <h2>pH Adjustment</h2>
+      <label>Batch volume (L)
+        <input id="ph_volume_l" value="5" inputmode="decimal">
+      </label>
       <label>Starting pH
         <input id="starting_pH" value="3.2" inputmode="decimal">
       </label>
       <label>Desired pH
         <input id="desired_pH" value="3.4" inputmode="decimal">
       </label>
-      <label>Chemical being used to adjust pH</label>
-      <!--Need to add in a selection of common forms of pH adjusters, need to be able to increase and decrease pH so do a > and < for the difference of start and end pH to see if negative...-->
+      <label>Adjuster
+        <select id="ph_adjuster_select"></select>
+      </label>
+      <button id="ph-calc-btn" class="Calculate_buttons">Calculate pH Adjustment</button>
+      <pre id="ph-output" class="result_box"></pre>
     </section>
 
 
@@ -162,11 +153,11 @@
       </label>
       
       <label>3<sup>rd</sup> SG (if no 3<sup>rd</sup> point then leave blank)
-        <input id="third_sg_tracking" value="1.05" inputmode="decimal">
+        <input id="third_sg_tracking" inputmode="decimal">
       </label>
 
       <label>Time for 3<sup>rd</sup> SG reading (if no 3<sup>rd</sup> point then leave blank)
-        <input id="third_day_tracking" value="3" inputmode="decimal">
+        <input id="third_day_tracking" inputmode="decimal">
       </label>
       
       <label>Initial mass of yeast (g)
@@ -225,23 +216,6 @@
 
 
 
-
-    <section id="screen-honey-density" class="screen">
-      <button class="back-home">← Home</button>
-      <h2>Honey Density</h2>
-      <p>Coming soon…</p>
-    </section>
-
-
-
-
-
-
-
-
-
-
-
     <section id="screen-honey-database" class="screen">
       <button class="back-home">← Home</button>
       <h2>Honey Database</h2>
@@ -251,7 +225,6 @@
           <thead>
               <tr>
                   <th>Honey name</th>
-                  <th>Density (kg/m³)</th>
                   <th>Sugar (%)</th>
                   <th>Price per bottle</th>
                   <th>Mass per bottle</th>
@@ -270,12 +243,6 @@
         id="honey-name-input"
         placeholder="Orange Blossom"
         autocomplete="off"
-        >
-        <input
-        id="honey-density-input"
-        type="number"
-        step="1"
-        placeholder="Density (kg/m³)"
         >
         <input
         id="honey-sugar-input"
@@ -343,7 +310,44 @@
         <button id="yeast_add_btn_yeastdb">Add</button>
       </div>
     </section>
+
+    
+    <section id="screen-pH-database" class="screen">
+    <button class="back-home">← Home</button>
+    <h2>pH Adjuster Database</h2>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>H+ per mol</th>
+            <th>Molar mass (g/mol)</th>
+            <th>Notes</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="ph-adjuster-table-body"></tbody>
+      </table>
+    </div>
+
+    <h3>Add new pH adjuster</h3>
+    <div class="honey-form">
+      <input id="ph-name-input" placeholder="e.g. Citric acid">
+      <select id="ph-type-input">
+        <option value="acid">Acid (lowers pH)</option>
+        <option value="base">Base (raises pH)</option>
+      </select>
+      <input id="ph-hplus-per-mol-input" inputmode="decimal" placeholder="H+ per mol (e.g. 3)">
+      <input id="ph-molar-mass-input" inputmode="decimal" placeholder="Molar mass g/mol (e.g. 192.12)">
+      <input id="ph-notes-input" placeholder="Optional notes">
+      <button id="ph-add-btn">Add</button>
+    </div>
+  </section>
   </div>
+
+
 
 
 

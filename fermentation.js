@@ -21,6 +21,73 @@ function clamp(x, lo, hi) {
     return Math.max(lo, Math.min(hi, x));
 }
 
+function getCssVar(name, fallback) {
+    try {
+        const v = getComputedStyle(document.body).getPropertyValue(name).trim();
+        return v || fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+function hexToRgba(hex, alpha) {
+    const h = String(hex).trim();
+    const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(h);
+    if (!m) return `rgba(0,0,0,${alpha})`;
+    let s = m[1];
+    if (s.length === 3) s = s.split("").map(ch => ch + ch).join("");
+    const r = parseInt(s.slice(0, 2), 16);
+    const g = parseInt(s.slice(2, 4), 16);
+    const b = parseInt(s.slice(4, 6), 16);
+    return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function applyThemeToChart(chart) {
+    if (!chart) return;
+
+    const accent = getCssVar("--accent", "#2563eb");
+    const text = getCssVar("--text", "#111827");
+    const border = getCssVar("--border", "rgba(0,0,0,0.15)");
+
+    chart.data.datasets.forEach(ds => {
+        ds.borderColor = accent;
+        ds.pointBackgroundColor = accent;
+        ds.pointBorderColor = accent;
+        ds.backgroundColor = hexToRgba(accent, 0.15);
+    });
+
+    chart.options.plugins = chart.options.plugins || {};
+    chart.options.plugins.legend = chart.options.plugins.legend || {};
+    chart.options.plugins.legend.labels = chart.options.plugins.legend.labels || {};
+    chart.options.plugins.legend.labels.color = text;
+
+    chart.options.scales = chart.options.scales || {};
+    for (const axis of ["x", "y"]) {
+        chart.options.scales[axis] = chart.options.scales[axis] || {};
+        chart.options.scales[axis].ticks = chart.options.scales[axis].ticks || {};
+        chart.options.scales[axis].grid = chart.options.scales[axis].grid || {};
+        chart.options.scales[axis].ticks.color = text;
+        chart.options.scales[axis].grid.color = border;
+    }
+
+    chart.update("none");
+}
+
+function applyThemeToCharts() {
+    if (!charts) return;
+    Object.values(charts).forEach(applyThemeToChart);
+}
+
+window.addEventListener("themechange", applyThemeToCharts);
+
+// backup: if you ever change theme just by swapping body classes
+new MutationObserver(applyThemeToCharts).observe(document.body, {
+    attributes: true,
+    attributeFilter: ["class"],
+});
+
+
+
 // ---------- Logistic shape fit (same form as python) ----------
 // Python form: SG = SG_min + (SG_max - SG_min)/(1 + exp(-k*(t - t0)))  :contentReference[oaicite:10]{index=10}
 //
@@ -241,12 +308,68 @@ function fitMonodParams(times, sgs, VmeadL, X0, S0) {
 let charts = null;
 
 function makeLineChart(canvasId, labelText) {
+    if (typeof Chart === "undefined") {
+        alert("Chart.js did not load. The CDN may be blocked/offline.");
+        return null;
+    }
+
     const canvas = document.getElementById(canvasId);
-    return new Chart(canvas, {
+    if (!canvas) {
+        alert(`Missing canvas: ${canvasId}`);
+        return null;
+    }
+
+    const chartAccent =
+        getComputedStyle(document.body).getPropertyValue("--chart-accent").trim() ||
+        getComputedStyle(document.body).getPropertyValue("--accent").trim() ||
+        "#ec4899";
+
+
+    // IMPORTANT: use {x,y} points + linear x scale (prevents string parsing issues)
+    const chart = new Chart(canvas, {
         type: "line",
-        data: { labels: [], datasets: [{ label: labelText, data: [], tension: 0.25, pointRadius: 2 }] },
-        options: { responsive: true, maintainAspectRatio: false, scales: { x: { ticks: { callback: function (value) { const label = this.getLabelForValue(value); return Number(label).toFixed(4) } } } } }
+        data: {
+            datasets: [{
+                label: labelText,
+                data: [],               // will be [{x:..., y:...}, ...]
+                tension: 0.25,
+                pointRadius: 2,
+                pointHitRadius: 12,
+                pointHoverRadius: 6,
+
+                borderColor: chartAccent,
+                pointBackgroundColor: chartAccent,
+                pointBorderColor: chartAccent,
+                borderWidth: 2,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: "nearest",
+                intersect: false
+            },
+
+            plugins: {
+                tooltip: {
+                    enabled: true
+                }
+            },
+            parsing: false,           // we supply x/y directly
+            scales: {
+                x: {
+                    type: "linear",
+                    ticks: {
+                        callback: (v) => Number(v).toFixed(2)
+                    }
+                }
+            }
+        }
     });
+
+    return chart;
 }
 
 function ensureCharts() {
@@ -261,77 +384,124 @@ function ensureCharts() {
 }
 
 function updateChart(chart, x, y) {
-    chart.data.labels = x;                 // chat says here!!!!!!!!!!!!!!!!!!!!!!!!!!
-    chart.data.datasets[0].data = y;
+    if (!chart) return;
+
+    const points = [];
+    const n = Math.min(x.length, y.length);
+    for (let i = 0; i < n; i++) {
+        points.push({ x: x[i], y: y[i] });
+    }
+
+    chart.data.datasets[0].data = points;
     chart.update();
 }
 
+
+// ---------- debug helper (shows messages in the fermentation screen) ----------
+function setFermentationDebug(msg) {
+    let el = document.getElementById("fermentation_debug");
+    if (!el) {
+        el = document.createElement("pre");
+        el.id = "fermentation_debug";
+        el.className = "result_box";
+        el.style.marginTop = "12px";
+        const btn = document.getElementById("fermentation_tracking_button");
+        if (btn && btn.parentElement) btn.parentElement.appendChild(el);
+    }
+    if (el) el.textContent = String(msg);
+}
+
 // ---------- main click handler ----------
-document.addEventListener("DOMContentLoaded", () => {
-    const btn = document.getElementById("fermentation_tracking_button");
-    if (!btn) return;
+const fermentationBtn = document.getElementById("fermentation_tracking_button");
 
-    btn.addEventListener("click", () => {
-        ensureCharts();
+if (!fermentationBtn) {
+    // If this shows, the script is loading but the HTML id changed
+    console.error("Missing #fermentation_tracking_button");
+} else {
+    fermentationBtn.addEventListener("click", () => {
+        try {
+            setFermentationDebug(""); // clear
 
-        // Inputs (your current HTML ids) :contentReference[oaicite:15]{index=15}
-        const SG0 = num("starting_sg_tracking");
-        const SG2 = num("second_sg_tracking");
-        const SG3 = num("third_sg_tracking"); // may be NaN
-        const VmeadL = num("volume_of_brew_tracking");
-        const yeastMassG = num("mass_of_yeast_tracking");
+            ensureCharts();
 
-        // Added time inputs (recommended to match python)
-        const t2 = num("second_day_tracking");
-        const t3 = num("third_day_tracking");
-        const tEnd = num("predict_day_tracking");
+            // If charts failed to create, explain why
+            if (!charts || Object.values(charts).some(c => !c)) {
+                setFermentationDebug(
+                    "Charts could not be created.\n" +
+                    (typeof Chart === "undefined"
+                        ? "Reason: Chart.js did not load (CDN blocked/offline).\n"
+                        : "Reason: One or more canvas elements were not found.\n")
+                );
+                return;
+            }
 
-        if (![SG0, SG2, VmeadL, yeastMassG, t2, tEnd].every(Number.isFinite)) return;
+            // Inputs
+            const SG0 = num("starting_sg_tracking");
+            const SG2 = num("second_sg_tracking");
+            const SG3 = num("third_sg_tracking"); // may be NaN
+            const VmeadL = num("volume_of_brew_tracking");
+            const yeastMassG = num("mass_of_yeast_tracking");
 
-        // Build measured arrays
-        const times = [0, t2];
-        const sgs = [SG0, SG2];
-        if (Number.isFinite(SG3) && Number.isFinite(t3)) {
-            times.push(t3);
-            sgs.push(SG3);
+            const t2 = num("second_day_tracking");
+            const t3 = num("third_day_tracking");
+            const tEnd = num("predict_day_tracking");
+
+            if (![SG0, SG2, VmeadL, yeastMassG, t2, tEnd].every(Number.isFinite)) {
+                setFermentationDebug(
+                    `Bad inputs:\nSG0=${SG0}\nSG2=${SG2}\nV=${VmeadL}\nyeast=${yeastMassG}\nt2=${t2}\ntEnd=${tEnd}`
+                );
+                return;
+            }
+
+            // Build measured arrays
+            const times = [0, t2];
+            const sgs = [SG0, SG2];
+            if (Number.isFinite(SG3) && Number.isFinite(t3)) {
+                times.push(t3);
+                sgs.push(SG3);
+            }
+
+            const paired = times.map((t, i) => [t, sgs[i]]).sort((a, b) => a[0] - b[0]);
+            const tMeas = paired.map(p => p[0]);
+            const sgMeas = paired.map(p => p[1]);
+
+            const SG_MIN = 1.0;
+            const SG_MAX = Math.max(...sgMeas);
+
+            const fit = fitLogisticBestFit(tMeas, sgMeas, SG_MIN, SG_MAX);
+            const tGrid = linspace(0, tEnd, 400);
+
+            if (fit) {
+                const sgShape = tGrid.map(t => clamp(logisticSG(t, fit.k, fit.t0, SG_MIN, SG_MAX), SG_MIN, 1.5));
+                const abvShape = sgShape.map(sg => abvHmrc(SG0, sg));
+                updateChart(charts.sgShape, tGrid, sgShape);
+                updateChart(charts.abvShape, tGrid, abvShape);
+            } else {
+                setFermentationDebug("Shape-fit could not be computed from the points provided.");
+            }
+
+            const X0 = yeastMassG / VmeadL;
+            const S0 = initialSugarFromSG(SG0, VmeadL);
+
+            const best = fitMonodParams(tMeas, sgMeas, VmeadL, X0, S0);
+
+            const { X, S } = simulateMonod(best.muMax, best.Ks, tGrid, X0, S0);
+
+            const sgMonod = S.map(s => Math.max(sugarToSG(s, VmeadL), SG_MIN));
+            const yeastConc = X;
+            const abvMonod = sgMonod.map(sg => abvHmrc(SG0, sg));
+
+            updateChart(charts.sgMonod, tGrid, sgMonod);
+            updateChart(charts.yeastMonod, tGrid, yeastConc);
+            updateChart(charts.abvMonod, tGrid, abvMonod);
+
+            // If we got here, it worked
+            if (!document.getElementById("fermentation_debug")?.textContent) {
+                setFermentationDebug("✅ Graphs updated.");
+            }
+        } catch (e) {
+            setFermentationDebug(`❌ Error:\n${e?.message || e}`);
+            console.error(e);
         }
-
-        // sort by time
-        const paired = times.map((t, i) => [t, sgs[i]]).sort((a, b) => a[0] - b[0]);
-        const tMeas = paired.map(p => p[0]);
-        const sgMeas = paired.map(p => p[1]);
-
-        // ===== 1) Logistic "shape fit" (Python Graph 1) =====  :contentReference[oaicite:16]{index=16}
-        const SG_MIN = 1.0;
-        const SG_MAX = Math.max(...sgMeas);
-
-        const fit = fitLogisticBestFit(tMeas, sgMeas, SG_MIN, SG_MAX);
-
-        const tGrid = linspace(0, tEnd, 400);
-
-        if (fit) {
-            const sgShape = tGrid.map(t => clamp(logisticSG(t, fit.k, fit.t0, SG_MIN, SG_MAX), SG_MIN, 1.5));
-            const abvShape = sgShape.map(sg => abvHmrc(SG0, sg));
-            updateChart(charts.sgShape, tGrid, sgShape);
-            updateChart(charts.abvShape, tGrid, abvShape);
-        }
-
-        // ===== 2) Monod model fit + simulation (Python Graph 2) =====  :contentReference[oaicite:17]{index=17}
-        const X0 = yeastMassG / VmeadL;          // same as python: X0 = mass/V  :contentReference[oaicite:18]{index=18}
-        const S0 = initialSugarFromSG(SG0, VmeadL); // same S0 formula :contentReference[oaicite:19]{index=19}
-
-        const best = fitMonodParams(tMeas, sgMeas, VmeadL, X0, S0);
-
-        // simulate monod on the chart grid
-        const { X, S } = simulateMonod(best.muMax, best.Ks, tGrid, X0, S0);
-
-        const sgMonod = S.map(s => Math.max(sugarToSG(s, VmeadL), SG_MIN));
-        const yeastConc = X;
-        const yeastTotalG = X.map(x => x * VmeadL);     // convert conc (g/L) → total grams
-        const abvMonod = sgMonod.map(sg => abvHmrc(SG0, sg));
-
-        updateChart(charts.sgMonod, tGrid, sgMonod);
-        updateChart(charts.yeastMonod, tGrid, yeastConc);
-        updateChart(charts.abvMonod, tGrid, abvMonod);
     });
-});
+}
