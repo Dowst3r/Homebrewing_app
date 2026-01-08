@@ -80,7 +80,7 @@ export function calculateMeadRecipe({
   yeastNRequirement,   // "Low" | "Medium" | "High"
 }) {
   const V = Number(volumeL);
-  const FG = Number(finalGravity);
+  const FG = Number(0.996);
   const ABV = Number(targetAbv);
   const sugarConc = Number(sugarConcPct);        // %
   const costcontainer = Number(pricePerContainer);
