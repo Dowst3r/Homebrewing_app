@@ -429,6 +429,48 @@ body.theme-dark .data-table td {
     border-bottom-color: #374151;
 }
 
+body.theme-dark .db-table th,
+body.theme-dark .db-table td {
+    border-bottom-color: #374151;
+}
+
+.stack-buttons {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.db-actions {
+    display: grid;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+}
+
+.secondary-btn {
+    background: transparent !important;
+    color: var(--text) !important;
+    border: 1px solid var(--border) !important;
+    box-shadow: none !important;
+}
+
+.export-btn {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    margin-right: 8px;
+}
+
+.export-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+body.theme-dark .export-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
 .delete-btn {
     background: #ef4444;
     /* red */
@@ -462,6 +504,37 @@ body.theme-dark .delete-btn {
     font-size: 0.9rem;
     min-width: 650px;
     /* enough width for all 5 columns */
+}
+
+/* Saved Recipes table (matches .data-table style) */
+.table-wrap {
+    width: 100%;
+    overflow-x: auto;
+    min-height: 120px;
+}
+
+.db-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0.5rem 0 1rem;
+    font-size: 0.9rem;
+    table-layout: fixed;
+    /* helps column widths behave */
+}
+
+.db-table th,
+.db-table td {
+    padding: 0.4rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+    word-break: break-word;
+}
+
+/* compact delete column */
+.db-table th:last-child,
+.db-table td:last-child {
+    width: 56px;
 }
 
 
@@ -527,4 +600,60 @@ body.theme-dark select {
     background: #0f172a;
     color: #f9fafb;
     border-color: #374151;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-card {
+    width: min(520px, 100%);
+    border-radius: 12px;
+    padding: 16px;
+    background: var(--bg-card, #fff);
+    color: var(--text, #111);
+}
+
+.modal-label {
+    display: block;
+    margin-top: 12px;
+    margin-bottom: 6px;
+    font-size: 0.95rem;
+}
+
+.modal-input,
+.modal-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    background: transparent;
+    color: inherit;
+}
+
+.modal-textarea {
+    resize: vertical;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 14px;
+}
+
+.hidden {
+    display: none !important;
 }

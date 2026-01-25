@@ -33,6 +33,7 @@
         <button class="home-button" data-target="screen-honey-database">Honey Database</button>
         <button class="home-button" data-target="screen-yeast-database">Yeast Database</button>
         <button class="home-button" data-target="screen-pH-database">pH Adjuster Database</button>
+        <button class="home-button" data-target="screen-recipe-database">Saved Recipes</button>
       </div>
     </section>
 
@@ -53,6 +54,9 @@
             </label>
         </div>
     </section>
+
+
+
 
     <section id="screen-mead-recipe" class="screen">
       <button class="back-home">← Home</button>
@@ -90,7 +94,18 @@
       <button id="mead_recipe_button_recipe" class="Calculate_buttons">Calculate Mead Recipe</button>
 
       <pre id="mead_recipe_output_recipe" class="result_box"></pre>
+
+      <div class="stack-buttons">
+        <button id="save-recipe-btn" class="Calculate_buttons">Save Recipe</button>
+        <button id="export-recipe-pdf-btn" class="Calculate_buttons secondary-btn" type="button">Export as PDF</button>
+      </div>
     </section>
+
+
+
+
+
+
 
     <!-- ABV SCREEN -->
     <section id="screen-abv" class="screen">
@@ -345,12 +360,53 @@
       <button id="ph-add-btn">Add</button>
     </div>
   </section>
+
+
+
+
+
+
+  <section id="screen-recipe-database" class="screen">
+  <h2>Saved Recipes</h2>
+  <button class="back-home">← Home</button>
+  <div class="table-wrap">
+    <table class="db-table">
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Recipe</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="recipe-table-body"></tbody>
+    </table>
+  </div>
+
+  <div class="db-actions">
+    <button id="recipe-export-pdf-btn" class="Calculate_buttons secondary-btn" type = "button">Export as PDF</button>
+    <button id="recipe-manual-add-btn" class="Calculate_buttons">Add Manual Recipe</button>
+  </div>
+  </section>
   </div>
 
 
 
+  <div id="modal-overlay" class="modal-overlay hidden">
+  <div class="modal-card">
+    <h3 id="modal-title">Modal</h3>
 
+    <label id="modal-name-label" class="modal-label" for="modal-name-input">Recipe name</label>
+    <input id="modal-name-input" class="modal-input" type="text" placeholder="e.g., Orange Blossom Session Mead" />
 
+    <label id="modal-text-label" class="modal-label hidden" for="modal-text-input">Recipe text</label>
+    <textarea id="modal-text-input" class="modal-textarea hidden" rows="8" placeholder="Paste/type your recipe here..."></textarea>
+
+    <div class="modal-actions">
+      <button id="modal-cancel-btn" class="action-button secondary">Cancel</button>
+      <button id="modal-ok-btn" class="action-button">Save</button>
+    </div>
+  </div>
+  </div>
 
 
 
