@@ -83,8 +83,13 @@ function showScreen(id) {
     if (id === "screen-ph") {
         fillPhDropdown();
     }
+
     if (id === "screen-pH-database") {
         renderPhTable();
+    }
+
+    if (id === "screen-recipe-database") {
+        renderRecipeTable();
     }
 
 }
@@ -718,12 +723,310 @@ if (phCalcBtn) {
     });
 }
 
+// ----- RECIPE DATABASE -----
+const recipeTableBody = document.getElementById('recipe-table-body');
+const saveRecipeBtn = document.getElementById('save-recipe-btn');
+const recipeManualAddBtn = document.getElementById('recipe-manual-add-btn');
+const exportRecipePdfBtn = document.getElementById('export-recipe-pdf-btn');   // on mead recipe screen
+const recipeExportPdfBtn = document.getElementById('recipe-export-pdf-btn');   // on saved recipes screen
+
+const RECIPE_DB_KEY = "recipeDb_v1";
+
+let recipeDb = loadRecipeDb();
+
+function loadRecipeDb() {
+    try {
+        const raw = localStorage.getItem(RECIPE_DB_KEY);
+        const parsed = raw ? JSON.parse(raw) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function escapeHtml(s) {
+    return String(s)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#39;");
+}
+
+function openPrintWindow({ title, htmlBody }) {
+    const w = window.open("", "_blank");
+    if (!w) {
+        alert("Popup blocked. Please allow popups to export as PDF.");
+        return;
+    }
+
+    const safeTitle = escapeHtml(title);
+
+    w.document.open();
+    w.document.write(`<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${safeTitle}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, sans-serif; padding: 24px; }
+    h1 { margin: 0 0 16px 0; font-size: 22px; }
+    h2 { margin: 22px 0 10px 0; font-size: 18px; }
+    pre { white-space: pre-wrap; word-wrap: break-word; background: #f3f4f6; padding: 12px; border-radius: 10px; border: 1px solid #e5e7eb; }
+    hr { border: none; border-top: 1px solid #e5e7eb; margin: 18px 0; }
+    .meta { color: #6b7280; font-size: 12px; margin-bottom: 14px; }
+    @media print { body { padding: 0; } pre { background: #fff; } }
+  </style>
+</head>
+<body>
+${htmlBody}
+</body>
+</html>`);
+    w.document.close();
+
+    setTimeout(() => {
+        w.focus();
+        w.print();
+    }, 250);
+
+    w.onafterprint = () => {
+        try { w.close(); } catch { }
+    };
+}
+
+function exportSingleRecipeToPdf(name, text) {
+    const safeName = (name || "Recipe").trim() || "Recipe";
+    const safeText = (text || "").trim();
+
+    if (!safeText) {
+        alert("Nothing to export yet.");
+        return;
+    }
+
+    const now = new Date();
+    const body = `
+<h1>${escapeHtml(safeName)}</h1>
+<div class="meta">${escapeHtml(now.toLocaleString())}</div>
+<pre>${escapeHtml(safeText)}</pre>
+`;
+    openPrintWindow({ title: safeName, htmlBody: body });
+}
+
+function exportAllRecipesToPdf(recipes) {
+    if (!Array.isArray(recipes) || recipes.length === 0) {
+        alert("No saved recipes to export.");
+        return;
+    }
+
+    const now = new Date();
+    let body = `<h1>Saved Recipes</h1><div class="meta">${escapeHtml(now.toLocaleString())}</div>`;
+
+    recipes.forEach((r, i) => {
+        const name = (r?.name || `Recipe ${i + 1}`).trim() || `Recipe ${i + 1}`;
+        const text = (r?.text || "").trim();
+        if (!text) return;
+
+        body += `
+<h2>${escapeHtml(name)}</h2>
+<pre>${escapeHtml(text)}</pre>
+<hr/>
+`;
+    });
+
+    openPrintWindow({ title: "Saved Recipes", htmlBody: body });
+}
+
+function saveRecipeDb() {
+    localStorage.setItem(RECIPE_DB_KEY, JSON.stringify(recipeDb));
+}
+
+function renderRecipeTable() {
+    if (!recipeTableBody) return;
+    recipeTableBody.innerHTML = "";
+
+    if (recipeDb.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 3;
+        td.textContent = "No saved recipes yet.";
+        tr.appendChild(td);
+        recipeTableBody.appendChild(tr);
+        return;
+    }
+
+    recipeDb.forEach((r, idx) => {
+        const tr = document.createElement("tr");
+
+        const tdName = document.createElement("td");
+        tdName.textContent = r.name || "(Unnamed)";
+
+        const tdText = document.createElement("td");
+        // Keep the table readable: show first ~140 chars, full text on click (optional)
+        const preview = (r.text || "").replace(/\s+/g, " ").trim();
+        tdText.textContent = preview.length > 140 ? preview.slice(0, 140) + "…" : preview;
+        tdText.title = r.text || "";
+
+        const tdDel = document.createElement("td");
+
+        // Export THIS recipe
+        const exportBtn = document.createElement("button");
+        exportBtn.textContent = "⤓";
+        exportBtn.className = "export-btn";
+        exportBtn.type = "button";
+        exportBtn.title = "Export this recipe as PDF";
+        exportBtn.addEventListener("click", () => {
+            exportSingleRecipeToPdf(r.name || "Recipe", r.text || "");
+        });
+
+        // Delete THIS recipe
+        const delBtn = document.createElement("button");
+        delBtn.textContent = "✕";
+        delBtn.className = "delete-btn";
+        delBtn.title = "Delete this recipe";
+        delBtn.type = "button";
+        delBtn.addEventListener("click", () => {
+            recipeDb.splice(idx, 1);
+            saveRecipeDb();
+            renderRecipeTable();
+        });
+
+        tdDel.appendChild(exportBtn);
+        tdDel.appendChild(delBtn);
+
+        tr.appendChild(tdName);
+        tr.appendChild(tdText);
+        tr.appendChild(tdDel);
+
+        recipeTableBody.appendChild(tr);
+    });
+}
+
+// ----- SIMPLE MODAL -----
+const modalOverlay = document.getElementById("modal-overlay");
+const modalTitle = document.getElementById("modal-title");
+const modalNameLabel = document.getElementById("modal-name-label");
+const modalNameInput = document.getElementById("modal-name-input");
+const modalTextLabel = document.getElementById("modal-text-label");
+const modalTextInput = document.getElementById("modal-text-input");
+const modalCancelBtn = document.getElementById("modal-cancel-btn");
+const modalOkBtn = document.getElementById("modal-ok-btn");
+
+let modalOnOk = null;
+
+function openModal({ title, okText = "Save", showName = true, showText = false, nameValue = "", textValue = "" }, onOk) {
+    modalTitle.textContent = title;
+    modalOkBtn.textContent = okText;
+
+    modalNameLabel.classList.toggle("hidden", !showName);
+    modalNameInput.classList.toggle("hidden", !showName);
+    modalTextLabel.classList.toggle("hidden", !showText);
+    modalTextInput.classList.toggle("hidden", !showText);
+
+    modalNameInput.value = nameValue;
+    modalTextInput.value = textValue;
+
+    modalOnOk = onOk;
+    modalOverlay.classList.remove("hidden");
+
+    // focus the first visible field
+    if (showName) modalNameInput.focus();
+    else if (showText) modalTextInput.focus();
+}
+
+function closeModal() {
+    modalOverlay.classList.add("hidden");
+    modalOnOk = null;
+}
+
+modalCancelBtn?.addEventListener("click", closeModal);
+modalOverlay?.addEventListener("click", (e) => {
+    if (e.target === modalOverlay) closeModal(); // click outside closes
+});
+
+modalOkBtn?.addEventListener("click", () => {
+    if (!modalOnOk) return;
+    const name = (modalNameInput?.value || "").trim();
+    const text = (modalTextInput?.value || "").trim();
+    modalOnOk({ name, text });
+});
+
+const MEAD_OUTPUT_ID = "mead_recipe_output_recipe"; // <-- CHANGE THIS to your actual output element id
+
+function getMeadOutputText() {
+    const el = document.getElementById(MEAD_OUTPUT_ID);
+    if (!el) return "";
+    // innerText gives a clean “what the user sees” version (better than innerHTML)
+    return (el.innerText || "").trim();
+}
+
+exportRecipePdfBtn?.addEventListener("click", () => {
+    const outputText = getMeadOutputText();
+
+    // optional: ask for a title using your existing modal
+    openModal(
+        { title: "Export recipe as PDF", okText: "Export", showName: true, showText: false, nameValue: "Mead Recipe" },
+        ({ name }) => {
+            exportSingleRecipeToPdf(name || "Mead Recipe", outputText);
+            closeModal();
+        }
+    );
+});
+
+recipeExportPdfBtn?.addEventListener("click", () => {
+    // Exports ALL saved recipes into one PDF document
+    exportAllRecipesToPdf(recipeDb);
+});
+
+saveRecipeBtn?.addEventListener("click", () => {
+    const outputText = getMeadOutputText();
+
+    openModal(
+        { title: "Save recipe", okText: "Save", showName: true, showText: false, nameValue: "" },
+        ({ name }) => {
+            if (!name) { alert("Please enter a recipe name."); return; }
+            if (!outputText) { alert("Nothing to save yet — calculate a recipe first."); return; }
+
+            recipeDb.unshift({
+                name,
+                text: outputText,
+                createdAt: Date.now()
+            });
+
+            saveRecipeDb();
+            renderRecipeTable();
+            closeModal();
+        }
+    );
+});
+
+recipeManualAddBtn?.addEventListener("click", () => {
+    openModal(
+        { title: "Add manual recipe", okText: "Add", showName: true, showText: true, nameValue: "", textValue: "" },
+        ({ name, text }) => {
+            if (!text) return;
+
+            const finalName = name || `Manual recipe (${new Date().toLocaleDateString()})`;
+
+            recipeDb.unshift({
+                name: finalName,
+                text,
+                createdAt: Date.now()
+            });
+
+            saveRecipeDb();
+            renderRecipeTable();
+            closeModal();
+        }
+    );
+});
 
 
 
 
 // Initial render (safe even if screen isn't visible yet)
 renderYeastTable();
+renderRecipeTable();
 
 // Render on load
 renderHoneyTable();
