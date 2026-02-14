@@ -1,6 +1,8 @@
 // fermentation.js (MODULE)
 import { abvHmrc, F_SP, Y_XS, MW_CO2, MW_ETH, RHO_ETH } from "./meadMath.js";
 
+const RHO_ETH_kg_L = RHO_ETH / 1000;
+
 // ---------- helpers ----------
 function num(id) {
     const el = document.getElementById(id);
@@ -8,6 +10,14 @@ function num(id) {
     const v = parseFloat(String(el.value).trim());
     return Number.isFinite(v) ? v : NaN;
 }
+
+// Anaerobic digestion-style bounds (converted Ks mg/L -> g/L)
+const MU_MIN = 0.001;   // d^-1
+const MU_MAX = 5;   // d^-1  (around typical 0.15)
+const KS_MIN = 0.01;   // g/L   (100 mg/L)
+const KS_MAX = 50;   // g/L   (1000 mg/L)
+const KD_MIN = 0.00;   // d^-1
+const KD_MAX = 5;   // d^-1  (around typical 0.02)
 
 function linspace(a, b, n) {
     const out = [];
@@ -86,7 +96,19 @@ new MutationObserver(applyThemeToCharts).observe(document.body, {
     attributeFilter: ["class"],
 });
 
+function interpAt(tGrid, yArr, t) {
+    if (t <= tGrid[0]) return yArr[0];
+    if (t >= tGrid[tGrid.length - 1]) return yArr[yArr.length - 1];
 
+    // Find interval (linear scan is fine for small arrays)
+    let i = 0;
+    while (i < tGrid.length - 2 && tGrid[i + 1] < t) i++;
+
+    const t0 = tGrid[i], t1 = tGrid[i + 1];
+    const y0 = yArr[i], y1 = yArr[i + 1];
+    const w = (t - t0) / (t1 - t0);
+    return y0 + w * (y1 - y0);
+}
 
 // ---------- Logistic shape fit (same form as python) ----------
 // Python form: SG = SG_min + (SG_max - SG_min)/(1 + exp(-k*(t - t0)))  :contentReference[oaicite:10]{index=10}
@@ -154,7 +176,8 @@ function fitLogisticBestFit(times, sgs, sgMin, sgMax) {
         for (let i = 0; i < t.length; i++) {
             const pred = logisticSG(t[i], k, t0, sgMin, sgMax);
             const d = pred - y[i];
-            err += d * d;
+            const w = (i === times.length - 1) ? 20 : 1;
+            err += w * d * d;
         }
         return err;
     }
@@ -199,7 +222,7 @@ function fitLogisticBestFit(times, sgs, sgMin, sgMax) {
 // ---------- Monod model (matches python) ----------
 // ODEs in python: dX = mu*X, dS = -dX/YXS  :contentReference[oaicite:11]{index=11}
 function muMonod(S, muMax, Ks) {
-    S = Math.max(S, 1e-9);
+    S = Math.max(0, S);
     return muMax * S / (Ks + S + 1e-12);
 }
 
@@ -241,31 +264,138 @@ function simulateMonod(muMax, Ks, tGrid, X0, S0) {
     return { X, S };
 }
 
+// RK4 integrator for [X, S] WITH death constant kd
+function simulateMonodWithDeath(muMax, Ks, kd, tGrid, X0, S0) {
+    const X = new Array(tGrid.length).fill(0);
+    const S = new Array(tGrid.length).fill(0);
+
+    X[0] = X0;
+    S[0] = S0;
+
+    for (let i = 1; i < tGrid.length; i++) {
+        const h = tGrid[i] - tGrid[i - 1];
+
+        const Xn = X[i - 1];
+        const Sn = S[i - 1];
+
+        const f1 = (x, s) => {
+            const mu = muMonod(s, muMax, Ks);
+
+            // dX/dt = (mu - kd) * X
+            const dX = (mu - kd) * x;
+
+            // dS/dt = -(mu * X) / Y_XS   (growth-linked uptake)
+            const dS = (s > 1e-9) ? (-(mu * x) / Y_XS) : 0;
+
+            return [dX, dS];
+        };
+
+        const [k1x, k1s] = f1(Xn, Sn);
+        const [k2x, k2s] = f1(Xn + 0.5 * h * k1x, Sn + 0.5 * h * k1s);
+        const [k3x, k3s] = f1(Xn + 0.5 * h * k2x, Sn + 0.5 * h * k2s);
+        const [k4x, k4s] = f1(Xn + h * k3x, Sn + h * k3s);
+
+        X[i] = Math.max(Xn + (h / 6) * (k1x + 2 * k2x + 2 * k3x + k4x), 0);
+        S[i] = Math.max(Sn + (h / 6) * (k1s + 2 * k2s + 2 * k3s + k4s), 0);
+    }
+
+    return { X, S };
+}
+
+function fitMonodParamsWithDeath(times, sgs, VmeadL, X0, S0) {
+    const sgMin = 0.996;
+    const tMax = Math.max(...times);
+    const dt = 0.05;
+    const nSteps = Math.max(2, Math.ceil(tMax / dt) + 1);
+    const tGrid = linspace(0, tMax, nSteps);
+
+    function sse(muMax, Ks, kd) {
+        // bounds (tweak if you want)
+        if (!(muMax >= MU_MIN && muMax <= MU_MAX &&
+            Ks >= KS_MIN && Ks <= KS_MAX &&
+            kd >= KD_MIN && kd <= KD_MAX)) return Infinity;
+
+        const { S } = simulateMonodWithDeath(muMax, Ks, kd, tGrid, X0, S0);
+
+        let err = 0;
+        for (let i = 0; i < times.length; i++) {
+            const ti = times[i];
+            const S_at_t = interpAt(tGrid, S, ti);
+            const sgPred = Math.max(sugarToSG(S_at_t, VmeadL), sgMin);
+            const d = sgPred - sgs[i];
+            const w = (i === times.length - 1) ? 20 : 1;
+            err += w * d * d;
+        }
+        return err;
+    }
+
+    let best = {
+        muMax: 0.5 * (MU_MIN + MU_MAX),
+        Ks: 0.5 * (KS_MIN + KS_MAX),
+        kd: 0.5 * (KD_MIN + KD_MAX),
+        err: Infinity
+    };
+
+    // coarse grid inside bounds
+    for (let i = 0; i < 18; i++) {
+        const mu = MU_MIN + (MU_MAX - MU_MIN) * (i / 17);
+        for (let j = 0; j < 18; j++) {
+            const ks = KS_MIN + (KS_MAX - KS_MIN) * (j / 17);
+            for (let k = 0; k < 18; k++) {
+                const kd = KD_MIN + (KD_MAX - KD_MIN) * (k / 17);
+                const e = sse(mu, ks, kd);
+                if (e < best.err) best = { muMax: mu, Ks: ks, kd, err: e };
+            }
+        }
+    }
+
+    // random refine inside bounds
+    for (let r = 0; r < 600; r++) {
+        const mu = clamp(
+            best.muMax + (Math.random() - 0.5) * 0.2 * (MU_MAX - MU_MIN),
+            MU_MIN, MU_MAX
+        );
+        const ks = clamp(
+            best.Ks + (Math.random() - 0.5) * 0.2 * (KS_MAX - KS_MIN),
+            KS_MIN, KS_MAX
+        );
+        const kd = clamp(
+            best.kd + (Math.random() - 0.5) * 0.2 * (KD_MAX - KD_MIN),
+            KD_MIN, KD_MAX
+        );
+
+        const e = sse(mu, ks, kd);
+        if (e < best.err) best = { muMax: mu, Ks: ks, kd, err: e };
+    }
+
+    return best;
+}
+
 // Python SG conversion:  :contentReference[oaicite:12]{index=12}
 // SG = 1 + (1 - YXS) * (S/V - F_SP) / ( ((1.05/0.79)*rho_eth)*(1 + MW_CO2/MW_eth) )
 function sugarToSG(S, VmeadL) {
-    const denom = ((1.05 / 0.79) * RHO_ETH) * (1 + (MW_CO2 / MW_ETH));
+    const denom = ((1.05 / 0.79) * RHO_ETH_kg_L) * (1 + (MW_CO2 / MW_ETH));
     return 1 + (1 - Y_XS) * ((S / VmeadL) - F_SP) / denom;
 }
 
 // Python S0 formula: :contentReference[oaicite:13]{index=13}
 function initialSugarFromSG(SG0, VmeadL) {
     const denom = (1 - Y_XS);
-    const factor = ((1.05 / 0.79) * RHO_ETH) * (1 + (MW_CO2 / MW_ETH));
+    const factor = ((1.05 / 0.79) * RHO_ETH_kg_L) * (1 + (MW_CO2 / MW_ETH));
     return VmeadL * (((SG0 - 1) * factor / denom) + F_SP);
 }
 
 // ---------- Replace SciPy differential evolution with a simple search ----------
 function fitMonodParams(times, sgs, VmeadL, X0, S0) {
-    const sgMin = 1.0;
+    const sgMin = 0.996;
     const tMax = Math.max(...times);
-    const dt = 0.05; // days (smaller = more accurate, slower)
+    const dt = 0.005; // days (smaller = more accurate, slower)
     const nSteps = Math.max(2, Math.ceil(tMax / dt) + 1);
     const tGrid = linspace(0, tMax, nSteps);
 
     // objective: SSE in SG space (same as python) :contentReference[oaicite:14]{index=14}
     function sse(muMax, Ks) {
-        if (!(muMax > 0.001 && muMax < 5 && Ks > 0.01 && Ks < 50)) return Infinity;
+        if (!(muMax >= MU_MIN && muMax <= MU_MAX && Ks >= KS_MIN && Ks <= KS_MAX)) return Infinity;
 
         const { S } = simulateMonod(muMax, Ks, tGrid, X0, S0);
 
@@ -273,30 +403,41 @@ function fitMonodParams(times, sgs, VmeadL, X0, S0) {
         let err = 0;
         for (let i = 0; i < times.length; i++) {
             const ti = times[i];
-            const idx = Math.min(tGrid.length - 1, Math.max(0, Math.round((ti / tMax) * (tGrid.length - 1))));
-            const sgPred = Math.max(sugarToSG(S[idx], VmeadL), sgMin);
+            const S_at_t = interpAt(tGrid, S, ti);
+            const sgPred = Math.max(sugarToSG(S_at_t, VmeadL), sgMin);
             const d = sgPred - sgs[i];
-            err += d * d;
+            const w = (i === times.length - 1) ? 20 : 1;
+            err += w * d * d;
         }
         return err;
     }
 
-    let best = { muMax: 0.5, Ks: 5, err: Infinity };
+    let best = {
+        muMax: 0.5 * (MU_MIN + MU_MAX),
+        Ks: 0.5 * (KS_MIN + KS_MAX),
+        err: Infinity
+    };
 
-    // coarse grid (fast + stable)
-    for (let i = 0; i < 16; i++) {
-        const mu = 0.001 + (5 - 0.001) * (i / 15);
-        for (let j = 0; j < 16; j++) {
-            const ks = 0.01 + (50 - 0.01) * (j / 15);
+    // coarse grid inside bounds
+    for (let i = 0; i < 30; i++) {
+        const mu = MU_MIN + (MU_MAX - MU_MIN) * (i / 29);
+        for (let j = 0; j < 30; j++) {
+            const ks = KS_MIN + (KS_MAX - KS_MIN) * (j / 29);
             const e = sse(mu, ks);
             if (e < best.err) best = { muMax: mu, Ks: ks, err: e };
         }
     }
 
-    // random refine around best
-    for (let k = 0; k < 300; k++) {
-        const mu = clamp(best.muMax * (0.6 + 0.8 * Math.random()), 0.001, 5);
-        const ks = clamp(best.Ks * (0.6 + 0.8 * Math.random()), 0.01, 50);
+    // random refine inside bounds
+    for (let k = 0; k < 400; k++) {
+        const mu = clamp(
+            best.muMax + (Math.random() - 0.5) * 0.2 * (MU_MAX - MU_MIN),
+            MU_MIN, MU_MAX
+        );
+        const ks = clamp(
+            best.Ks + (Math.random() - 0.5) * 0.2 * (KS_MAX - KS_MIN),
+            KS_MIN, KS_MAX
+        );
         const e = sse(mu, ks);
         if (e < best.err) best = { muMax: mu, Ks: ks, err: e };
     }
@@ -354,7 +495,11 @@ function makeLineChart(canvasId, labelText) {
 
             plugins: {
                 tooltip: {
-                    enabled: true
+                    enabled: true,
+                    callbacks: {
+                        title: (items) => Number(items[0].parsed.x).toFixed(4),
+                        label: (ctx) => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(4)}`
+                    }
                 }
             },
             parsing: false,           // we supply x/y directly
@@ -362,7 +507,7 @@ function makeLineChart(canvasId, labelText) {
                 x: {
                     type: "linear",
                     ticks: {
-                        callback: (v) => Number(v).toFixed(2)
+                        callback: (v) => Number(v).toFixed(3)
                     }
                 }
             }
@@ -375,11 +520,11 @@ function makeLineChart(canvasId, labelText) {
 function ensureCharts() {
     if (charts) return;
     charts = {
-        sgShape: makeLineChart("sgShapeChart", "SG", "Time (days)", "Specific Gravity"),
-        abvShape: makeLineChart("abvShapeChart", "ABV (%)", "Time (days)", "ABV (%)"),
-        sgMonod: makeLineChart("sgMonodChart", "SG", "Time (days)", "Specific Gravity"),
-        yeastMonod: makeLineChart("yeastMonodChart", "Yeast (g/L)", "Time (days)", "Yeast concentration (g/L)"),
-        abvMonod: makeLineChart("abvMonodChart", "ABV (%)", "Time (days)", "ABV (%)"),
+        sgShape: makeLineChart("sgShapeChart", "SG"),
+        abvShape: makeLineChart("abvShapeChart", "ABV (%)"),
+        sgMonod: makeLineChart("sgMonodChart", "SG"),
+        yeastMonod: makeLineChart("yeastMonodChart", "Yeast (g/L)"),
+        abvMonod: makeLineChart("abvMonodChart", "ABV (%)"),
     };
 }
 
@@ -465,11 +610,12 @@ if (!fermentationBtn) {
             const tMeas = paired.map(p => p[0]);
             const sgMeas = paired.map(p => p[1]);
 
-            const SG_MIN = 1.0;
+            const SG_MIN = 0.996;
             const SG_MAX = Math.max(...sgMeas);
 
             const fit = fitLogisticBestFit(tMeas, sgMeas, SG_MIN, SG_MAX);
-            const tGrid = linspace(0, tEnd, 400);
+            let tGrid = linspace(0, tEnd, 400);
+            tGrid = Array.from(new Set([...tGrid, ...tMeas])).sort((a, b) => a - b);
 
             if (fit) {
                 const sgShape = tGrid.map(t => clamp(logisticSG(t, fit.k, fit.t0, SG_MIN, SG_MAX), SG_MIN, 1.5));
@@ -483,9 +629,20 @@ if (!fermentationBtn) {
             const X0 = yeastMassG / VmeadL;
             const S0 = initialSugarFromSG(SG0, VmeadL);
 
-            const best = fitMonodParams(tMeas, sgMeas, VmeadL, X0, S0);
+            let best;
+            let sim;
 
-            const { X, S } = simulateMonod(best.muMax, best.Ks, tGrid, X0, S0);
+            if (tMeas.length === 3) {
+                // 3 points -> fit muMax, Ks, AND kd, then simulate with death
+                best = fitMonodParamsWithDeath(tMeas, sgMeas, VmeadL, X0, S0);
+                sim = simulateMonodWithDeath(best.muMax, best.Ks, best.kd, tGrid, X0, S0);
+            } else {
+                // 2 points (or anything else) -> original model
+                best = fitMonodParams(tMeas, sgMeas, VmeadL, X0, S0);
+                sim = simulateMonod(best.muMax, best.Ks, tGrid, X0, S0);
+            }
+
+            const { X, S } = sim;
 
             const sgMonod = S.map(s => Math.max(sugarToSG(s, VmeadL), SG_MIN));
             const yeastConc = X;

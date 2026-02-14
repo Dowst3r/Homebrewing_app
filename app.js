@@ -155,7 +155,8 @@ const defaultHoneyDb = [
     { name: 'Runny honey Lidl', sugar: 79.7, price: 1.59, mass: 400 },
     { name: 'Clear honey Lidl', sugar: 79.7, price: 1.69, mass: 500 },
     { name: 'Generic honey', sugar: 80, price: 1.49, mass: 300 },
-    { name: 'Runny honey Rowse', sugar: 80.8, price: 5, mass: 720 }
+    { name: 'Runny honey Rowse', sugar: 80.8, price: 5, mass: 720 },
+    { name: 'Manuka honey Lidl', sugar: 85.9, price: 4.89, mass: 250 }
 ];
 
 function loadHoneyDb() {
