@@ -245,6 +245,57 @@
     <section id="screen-fermentation-tracking" class="screen">
       <button class="back-home">← Home</button>
       <h2>Fermentation Tracking</h2>
+
+      <!-- Date/time query (Day 0 and query time) -->
+      <h3 class="subhead">Date/Time Query</h3>
+
+      <label>Day 0 date
+        <input id="ft_day0_date" type="date">
+      </label>
+
+      <h3 class="subhead">Day 0 time</h3>
+      <div class="time-between-grid grid-4">
+        <label>Hour
+          <input id="ft_day0_hour" type="number" min="1" max="12" value="12" inputmode="numeric">
+        </label>
+        <label>Minute
+          <input id="ft_day0_min" type="number" min="0" max="59" value="0" inputmode="numeric">
+        </label>
+        <label>Second
+          <input id="ft_day0_sec" type="number" min="0" max="59" value="0" inputmode="numeric">
+        </label>
+        <label>AM/PM
+          <select id="ft_day0_ampm">
+            <option value="a">AM</option>
+            <option value="p">PM</option>
+          </select>
+        </label>
+      </div>
+
+      <h3 class="subhead">Query time</h3>
+      <label>Query date (find SG/ABV at this time)
+        <input id="ft_query_date" type="date">
+      </label>
+
+      <div class="time-between-grid grid-4">
+        <label>Hour
+          <input id="ft_query_hour" type="number" min="1" max="12" value="12" inputmode="numeric">
+        </label>
+        <label>Minute
+          <input id="ft_query_min" type="number" min="0" max="59" value="0" inputmode="numeric">
+        </label>
+        <label>Second
+          <input id="ft_query_sec" type="number" min="0" max="59" value="0" inputmode="numeric">
+        </label>
+        <label>AM/PM
+          <select id="ft_query_ampm">
+            <option value="a">AM</option>
+            <option value="p">PM</option>
+          </select>
+        </label>
+      </div>
+
+      <pre id="ft_query_output" class="result_box"></pre>
       
       <label>Starting SG
         <input id="starting_sg_tracking" value="1.105" inputmode="decimal">

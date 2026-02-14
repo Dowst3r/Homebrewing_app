@@ -682,6 +682,7 @@ body.theme-dark select {
 
 .subhead {
     margin: 0 0 0.65rem 0;
+    color: var(--accent);
     font-size: 1.25rem;
     letter-spacing: 0.2px;
 }
