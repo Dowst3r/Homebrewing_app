@@ -1,4 +1,12 @@
 import { abvHmrc, calculateMeadRecipe, calculatePhAdjustment } from './meadMath.js';
+import {
+    durationBetween,
+    formatDateTimeLabel,
+    makeLocalDate,
+    monthIndexToLabel,
+    monthLabelToIndex,
+} from './timeDuration.js';
+
 
 // ----- THEME HANDLING -----
 
@@ -90,6 +98,10 @@ function showScreen(id) {
 
     if (id === "screen-recipe-database") {
         renderRecipeTable();
+    }
+
+    if (id === "screen-time-duration") {
+        initTimeDurationScreen();
     }
 
 }
@@ -1021,6 +1033,122 @@ recipeManualAddBtn?.addEventListener("click", () => {
         }
     );
 });
+
+// =====================
+// TIME BETWEEN DATES
+// =====================
+
+let timeDurationInitDone = false;
+
+function getEl(id) {
+    return document.getElementById(id);
+}
+
+function setSelectOptions(selectEl, labels) {
+    if (!selectEl) return;
+    selectEl.innerHTML = "";
+    labels.forEach((label) => {
+        const opt = document.createElement("option");
+        opt.value = label;
+        opt.textContent = label;
+        selectEl.appendChild(opt);
+    });
+}
+
+function setFormFromDate(prefix, d) {
+    const mon = monthIndexToLabel(d.getMonth());
+    const day = d.getDate();
+    const year = d.getFullYear();
+
+    let hh = d.getHours();
+    const isPm = hh >= 12;
+    hh = hh % 12;
+    if (hh === 0) hh = 12;
+
+    getEl(`${prefix}_month`).value = mon;
+    getEl(`${prefix}_day`).value = String(day);
+    getEl(`${prefix}_year`).value = String(year);
+    getEl(`${prefix}_hour`).value = String(hh);
+    getEl(`${prefix}_min`).value = String(d.getMinutes());
+    getEl(`${prefix}_sec`).value = String(d.getSeconds());
+    getEl(`${prefix}_ampm`).value = isPm ? "p" : "a";
+}
+
+function readFormToDate(prefix) {
+    const monLabel = getEl(`${prefix}_month`)?.value;
+    const monthIndex = monthLabelToIndex(monLabel);
+
+    const year = Number(getEl(`${prefix}_year`)?.value);
+    const day = Number(getEl(`${prefix}_day`)?.value);
+    const hour12 = Number(getEl(`${prefix}_hour`)?.value);
+    const minute = Number(getEl(`${prefix}_min`)?.value);
+    const second = Number(getEl(`${prefix}_sec`)?.value);
+    const ampm = getEl(`${prefix}_ampm`)?.value;
+
+    return makeLocalDate({ year, monthIndex, day, hour12, minute, second, ampm });
+}
+
+function formatTotals(x) {
+    const daysStr = x.totalDays.toFixed(4);
+    const hoursStr = x.totalHours.toFixed(3);
+    const minutesStr = Math.round(x.totalMinutes).toLocaleString();
+    const secondsStr = Math.round(x.totalSeconds).toLocaleString();
+    return { daysStr, hoursStr, minutesStr, secondsStr };
+}
+
+function initTimeDurationScreen() {
+    if (timeDurationInitDone) return;
+    timeDurationInitDone = true;
+
+    const startMonth = getEl("td_start_month");
+    const endMonth = getEl("td_end_month");
+    const out = getEl("td_output");
+    if (!startMonth || !endMonth || !out) return;
+
+    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    setSelectOptions(startMonth, months);
+    setSelectOptions(endMonth, months);
+
+    // seed with your example so you can verify it matches the screenshot
+    setFormFromDate("td_start", new Date(2026, 0, 18, 15, 44, 0));
+    setFormFromDate("td_end", new Date(2026, 1, 14, 9, 28, 0));
+
+    function calcAndRender() {
+        const start = readFormToDate("td_start");
+        const end = readFormToDate("td_end");
+
+        const r = durationBetween(start, end);
+        if (r.error) {
+            out.textContent = `Error: ${r.error}`;
+            return;
+        }
+
+        const startLabel = formatDateTimeLabel(start);
+        const endLabel = formatDateTimeLabel(end);
+        const totals = formatTotals(r);
+
+        const swapNote = r.swapped
+            ? "\n(Note: end time was earlier than start time — showing the absolute difference.)\n"
+            : "";
+
+        const sWord = (r.seconds === 1) ? "second" : "seconds";
+
+        out.textContent =
+            `The time between ${startLabel} and ${endLabel} is:${swapNote}\n` +
+            `${r.days} days, ${r.hours} hours, ${r.minutes} minutes, and ${r.seconds} ${sWord}\n\n` +
+            `${totals.daysStr} days\n\n` +
+            `${totals.hoursStr} hours\n\n` +
+            `${totals.minutesStr} minutes\n\n` +
+            `${totals.secondsStr} seconds`;
+    }
+
+    getEl("td_calc")?.addEventListener("click", calcAndRender);
+    getEl("td_clear")?.addEventListener("click", () => { out.textContent = ""; });
+    getEl("td_start_now")?.addEventListener("click", () => { setFormFromDate("td_start", new Date()); });
+    getEl("td_end_now")?.addEventListener("click", () => { setFormFromDate("td_end", new Date()); });
+
+    calcAndRender();
+}
 
 
 

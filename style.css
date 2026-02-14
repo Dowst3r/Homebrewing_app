@@ -657,3 +657,106 @@ body.theme-dark select {
 .hidden {
     display: none !important;
 }
+
+/* ---------- Time Between Dates screen ---------- */
+/* ---------- Time Between Dates screen ---------- */
+.time-between-card {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--card);
+    box-shadow: var(--shadow-soft);
+}
+
+/* Make Start/End feel like two sub-cards */
+.time-between-section {
+    padding: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: color-mix(in srgb, var(--card) 88%, transparent);
+}
+
+.time-between-section+.time-between-section {
+    margin-top: 0.9rem;
+}
+
+.subhead {
+    margin: 0 0 0.65rem 0;
+    font-size: 1.25rem;
+    letter-spacing: 0.2px;
+}
+
+.time-between-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.65rem;
+    align-items: end;
+    margin-bottom: 0.65rem;
+}
+
+.time-between-grid.grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+/* Label spacing consistent */
+.time-between-grid label {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+}
+
+/* Inputs/selects: same height + look */
+#screen-time-duration input,
+#screen-time-duration select {
+    height: 44px;
+    border-radius: 14px;
+}
+
+/* Make the AM/PM select not feel “tiny” */
+#td_start_ampm,
+#td_end_ampm {
+    min-width: 100%;
+}
+
+/* “Now” buttons: reduce visual dominance, match secondary style */
+#td_start_now,
+#td_end_now {
+    width: 100%;
+    padding: 0.9rem 0.9rem;
+    border-radius: 16px;
+    margin-top: 0.25rem;
+}
+
+/* Action row: calculate/clear looks like primary + secondary */
+.time-between-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.65rem;
+    margin-top: 0.85rem;
+}
+
+/* Output: looks like result panel not raw text */
+#td_output.result_box {
+    margin-top: 0.85rem;
+    padding: 0.85rem;
+    border-radius: 16px;
+    line-height: 1.4;
+    white-space: pre-wrap;
+}
+
+/* Divider: more subtle */
+.soft-rule {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 0.9rem 0;
+    opacity: 0.7;
+}
+
+/* Mobile: stack to keep AM/PM aligned nicely */
+@media (max-width: 520px) {
+
+    .time-between-grid,
+    .time-between-grid.grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
