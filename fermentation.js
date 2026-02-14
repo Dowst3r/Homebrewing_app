@@ -1,5 +1,6 @@
 // fermentation.js (MODULE)
 import { abvHmrc, F_SP, Y_XS, MW_CO2, MW_ETH, RHO_ETH } from "./meadMath.js";
+import { durationBetween } from "./timeDuration.js";
 
 const RHO_ETH_kg_L = RHO_ETH / 1000;
 
@@ -13,11 +14,53 @@ function num(id) {
 
 // Anaerobic digestion-style bounds (converted Ks mg/L -> g/L)
 const MU_MIN = 0.001;   // d^-1
-const MU_MAX = 5;   // d^-1  (around typical 0.15)
-const KS_MIN = 0.01;   // g/L   (100 mg/L)
-const KS_MAX = 50;   // g/L   (1000 mg/L)
+const MU_MAX = 5;   // d^-1  (around typical 5)
+const KS_MIN = 0.01;   // g/L   (10 mg/L)
+const KS_MAX = 50;   // g/L   (5000 mg/L)
 const KD_MIN = 0.00;   // d^-1
-const KD_MAX = 5;   // d^-1  (around typical 0.02)
+const KD_MAX = 5;   // d^-1  (around typical 5)
+
+function getStr(id) {
+    const el = document.getElementById(id);
+    return (el?.value || "").trim();
+}
+
+// Reads <input type="date"> + <input type="time"> into a local Date.
+// time input uses "HH:MM" or "HH:MM:SS" (we support both).
+function readLocalDateTimeAmpm(dateId, hourId, minId, secId, ampmId) {
+    const d = getStr(dateId);
+    if (!d) return new Date(NaN);
+
+    const year = Number(d.slice(0, 4));
+    const month = Number(d.slice(5, 7)) - 1; // 0-11
+    const day = Number(d.slice(8, 10));
+
+    let hour12 = Number(getStr(hourId));
+    const minute = Number(getStr(minId));
+    const second = Number(getStr(secId));
+    const ampm = getStr(ampmId); // "a" or "p"
+
+    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return new Date(NaN);
+    if (!Number.isFinite(hour12) || !Number.isFinite(minute) || !Number.isFinite(second)) return new Date(NaN);
+
+    if (hour12 < 1) hour12 = 1;
+    if (hour12 > 12) hour12 = 12;
+
+    let hour24 = hour12;
+    if (ampm === "p" && hour24 !== 12) hour24 += 12;
+    if (ampm === "a" && hour24 === 12) hour24 = 0;
+
+    return new Date(year, month, day, hour24, minute, second, 0);
+}
+
+function formatTotalsLikeTimeScreen(r) {
+    return {
+        daysStr: r.totalDays.toFixed(4),
+        hoursStr: r.totalHours.toFixed(3),
+        minutesStr: Math.round(r.totalMinutes).toLocaleString(),
+        secondsStr: Math.round(r.totalSeconds).toLocaleString(),
+    };
+}
 
 function linspace(a, b, n) {
     const out = [];
@@ -651,6 +694,53 @@ if (!fermentationBtn) {
             updateChart(charts.sgMonod, tGrid, sgMonod);
             updateChart(charts.yeastMonod, tGrid, yeastConc);
             updateChart(charts.abvMonod, tGrid, abvMonod);
+
+            // ---- Date/time query output ----
+            const outEl = document.getElementById("ft_query_output");
+            if (outEl) {
+                const day0 = readLocalDateTimeAmpm("ft_day0_date", "ft_day0_hour", "ft_day0_min", "ft_day0_sec", "ft_day0_ampm");
+                const query = readLocalDateTimeAmpm("ft_query_date", "ft_query_hour", "ft_query_min", "ft_query_sec", "ft_query_ampm");
+
+                const dur = durationBetween(day0, query);
+
+                if (dur?.error) {
+                    outEl.textContent = `Date/time query error: ${dur.error}`;
+                } else if (!Number.isFinite(dur.totalDays)) {
+                    outEl.textContent = "Enter Day 0 date+time and Query date+time to compute SG/ABV at a date.";
+                } else {
+                    const tQueryDays = dur.totalDays; // THIS is the time axis used by your models
+
+                    // Shape-fit prediction at tQueryDays (if fit exists)
+                    let sgShapeAt = NaN;
+                    let abvShapeAt = NaN;
+                    if (fit) {
+                        sgShapeAt = clamp(logisticSG(tQueryDays, fit.k, fit.t0, SG_MIN, SG_MAX), SG_MIN, 1.5);
+                        abvShapeAt = abvHmrc(SG0, sgShapeAt);
+                    }
+
+                    // Monod prediction at tQueryDays (interpolate from simulated arrays)
+                    const sgMonodAt = interpAt(tGrid, sgMonod, tQueryDays);
+                    const abvMonodAt = abvHmrc(SG0, sgMonodAt);
+                    const yeastAt = interpAt(tGrid, yeastConc, tQueryDays);
+
+                    const totals = formatTotalsLikeTimeScreen(dur);
+                    const sWord = (dur.seconds === 1) ? "second" : "seconds";
+
+                    outEl.textContent =
+                        `Time between Day 0 and Query is:\n` +
+                        `${dur.days} days, ${dur.hours} hours, ${dur.minutes} minutes, and ${dur.seconds} ${sWord}\n\n` +
+                        `${totals.daysStr} days\n` +
+                        `${totals.hoursStr} hours\n` +
+                        `${totals.minutesStr} minutes\n` +
+                        `${totals.secondsStr} seconds\n\n` +
+                        `--- Predictions at t = ${totals.daysStr} days ---\n` +
+                        (Number.isFinite(sgShapeAt)
+                            ? `Shape fit: SG = ${sgShapeAt.toFixed(4)}, ABV = ${abvShapeAt.toFixed(2)}%\n`
+                            : `Shape fit: (not available — need at least 2 points)\n`) +
+                        `Monod:     SG = ${sgMonodAt.toFixed(4)}, ABV = ${abvMonodAt.toFixed(2)}%\n` +
+                        `Monod yeast concentration: ${yeastAt.toFixed(4)} g/L`;
+                }
+            }
 
             // If we got here, it worked
             if (!document.getElementById("fermentation_debug")?.textContent) {
