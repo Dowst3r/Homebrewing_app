@@ -12,13 +12,55 @@ function num(id) {
     return Number.isFinite(v) ? v : NaN;
 }
 
+// --- Seeded RNG helpers (deterministic Math.random replacement) ---
+
+// String -> 32-bit seed
+function xmur3(str) {
+    let h = 1779033703 ^ str.length;
+    for (let i = 0; i < str.length; i++) {
+        h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+        h = (h << 13) | (h >>> 19);
+    }
+    return function () {
+        h = Math.imul(h ^ (h >>> 16), 2246822507);
+        h = Math.imul(h ^ (h >>> 13), 3266489909);
+        h ^= h >>> 16;
+        return h >>> 0;
+    };
+}
+
+// 32-bit seed -> RNG that returns [0,1)
+function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+        a |= 0;
+        a = (a + 0x6D2B79F5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+// Build a stable seed from your inputs (recommended)
+function makeFitSeed({ SG0, sgMeas, tMeas, yeastG, VmeadL }) {
+    // Use fixed rounding so tiny float formatting differences don't change the seed
+    const s = [
+        `SG0=${Number(SG0).toFixed(6)}`,
+        `sg=${sgMeas.map(x => Number(x).toFixed(6)).join(",")}`,
+        `t=${tMeas.map(x => Number(x).toFixed(6)).join(",")}`,
+        `yeastG=${Number(yeastG).toFixed(6)}`,
+        `V=${Number(VmeadL).toFixed(6)}`
+    ].join("|");
+    return xmur3(s)(); // 32-bit unsigned int
+}
+
 // Anaerobic digestion-style bounds (converted Ks mg/L -> g/L)
 const MU_MIN = 0.001;   // d^-1
 const MU_MAX = 5;   // d^-1  (around typical 5)
 const KS_MIN = 0.01;   // g/L   (10 mg/L)
 const KS_MAX = 50;   // g/L   (5000 mg/L)
 const KD_MIN = 0.00;   // d^-1
-const KD_MAX = 5;   // d^-1  (around typical 5)
+const KD_MAX = 0.5;   // d^-1  (around typical 0.5)
 
 function getStr(id) {
     const el = document.getElementById(id);
@@ -32,7 +74,7 @@ function readLocalDateTimeAmpm(dateId, hourId, minId, secId, ampmId) {
     if (!d) return new Date(NaN);
 
     const year = Number(d.slice(0, 4));
-    const month = Number(d.slice(5, 7)) - 1; // 0-11
+    const month = Number(d.slice(5, 7)) - 1;
     const day = Number(d.slice(8, 10));
 
     let hour12 = Number(getStr(hourId));
@@ -154,7 +196,7 @@ function interpAt(tGrid, yArr, t) {
 }
 
 // ---------- Logistic shape fit (same form as python) ----------
-// Python form: SG = SG_min + (SG_max - SG_min)/(1 + exp(-k*(t - t0)))  :contentReference[oaicite:10]{index=10}
+// Python form: SG = SG_min + (SG_max - SG_min)/(1 + exp(-k*(t - t0)))
 //
 // With two points, you can solve analytically (no fsolve needed):
 // Let y = (SG - SG_min)/(SG_max - SG_min), odds = y/(1-y) = exp(k*(t-t0))
@@ -169,8 +211,8 @@ function fitLogisticFromTwoPoints(t1, sg1, t2, sg2, sgMin, sgMax) {
     const y1c = clamp(y1, 1e-6, 1 - 1e-6);
     const y2c = clamp(y2, 1e-6, 1 - 1e-6);
 
-    const o1 = y1c / (1 - y1c);
-    const o2 = y2c / (1 - y2c);
+    const o1 = (1 - y1c) / y1c;
+    const o2 = (1 - y2c) / y2c;
 
     const ln1 = Math.log(o1);
     const ln2 = Math.log(o2);
@@ -189,9 +231,14 @@ function logisticSG(t, k, t0, sgMin, sgMax) {
     return sgMin + (sgMax - sgMin) / (1 + Math.exp(-k * (t - t0)));
 }
 
+// Decreasing logistic: starts near sgMax (early), approaches sgMin (late)
+function logisticSGDec(t, k, t0, sgMin, sgMax) {
+    return sgMin + (sgMax - sgMin) / (1 + Math.exp(k * (t - t0)));
+}
+
 // Best-fit logistic for 2 or 3 points (least-squares).
 // Uses analytic solution for 2 points, and a small search for 3+ points.
-function fitLogisticBestFit(times, sgs, sgMin, sgMax) {
+function fitLogisticBestFit(times, sgs, sgMin, sgMax, rand = Math.random) {
     if (!Array.isArray(times) || !Array.isArray(sgs) || times.length !== sgs.length) return null;
     if (times.length < 2) return null;
 
@@ -217,7 +264,7 @@ function fitLogisticBestFit(times, sgs, sgMin, sgMax) {
         if (!(k > 1e-6) || !Number.isFinite(k) || !Number.isFinite(t0)) return Infinity;
         let err = 0;
         for (let i = 0; i < t.length; i++) {
-            const pred = logisticSG(t[i], k, t0, sgMin, sgMax);
+            const pred = logisticSGDec(t[i], k, t0, sgMin, sgMax);
             const d = pred - y[i];
             const w = (i === times.length - 1) ? 20 : 1;
             err += w * d * d;
@@ -252,8 +299,8 @@ function fitLogisticBestFit(times, sgs, sgMin, sgMax) {
 
     // --- random refine around the best ---
     for (let r = 0; r < 400; r++) {
-        const k = clamp(best.k * (0.7 + 0.6 * Math.random()), kMin, kMax);
-        const t0 = clamp(best.t0 + (Math.random() - 0.5) * 0.6 * span, t0Min, t0Max);
+        const k = clamp(best.k * (0.7 + 0.6 * rand()), kMin, kMax);
+        const t0 = clamp(best.t0 + (rand() - 0.5) * 0.6 * span, t0Min, t0Max);
         const e = sse(k, t0);
         if (e < best.err) best = { k, t0, err: e };
     }
@@ -263,7 +310,7 @@ function fitLogisticBestFit(times, sgs, sgMin, sgMax) {
 
 
 // ---------- Monod model (matches python) ----------
-// ODEs in python: dX = mu*X, dS = -dX/YXS  :contentReference[oaicite:11]{index=11}
+// ODEs in python: dX = mu*X, dS = -dX/Y_XS
 function muMonod(S, muMax, Ks) {
     S = Math.max(0, S);
     return muMax * S / (Ks + S + 1e-12);
@@ -345,10 +392,10 @@ function simulateMonodWithDeath(muMax, Ks, kd, tGrid, X0, S0) {
     return { X, S };
 }
 
-function fitMonodParamsWithDeath(times, sgs, VmeadL, X0, S0) {
+function fitMonodParamsWithDeath(times, sgs, VmeadL, X0, S0, rand = Math.random) {
     const sgMin = 0.996;
     const tMax = Math.max(...times);
-    const dt = 0.05;
+    const dt = 0.01;
     const nSteps = Math.max(2, Math.ceil(tMax / dt) + 1);
     const tGrid = linspace(0, tMax, nSteps);
 
@@ -395,15 +442,15 @@ function fitMonodParamsWithDeath(times, sgs, VmeadL, X0, S0) {
     // random refine inside bounds
     for (let r = 0; r < 600; r++) {
         const mu = clamp(
-            best.muMax + (Math.random() - 0.5) * 0.2 * (MU_MAX - MU_MIN),
+            best.muMax + (rand() - 0.5) * 0.2 * (MU_MAX - MU_MIN),
             MU_MIN, MU_MAX
         );
         const ks = clamp(
-            best.Ks + (Math.random() - 0.5) * 0.2 * (KS_MAX - KS_MIN),
+            best.Ks + (rand() - 0.5) * 0.2 * (KS_MAX - KS_MIN),
             KS_MIN, KS_MAX
         );
         const kd = clamp(
-            best.kd + (Math.random() - 0.5) * 0.2 * (KD_MAX - KD_MIN),
+            best.kd + (rand() - 0.5) * 0.2 * (KD_MAX - KD_MIN),
             KD_MIN, KD_MAX
         );
 
@@ -414,14 +461,14 @@ function fitMonodParamsWithDeath(times, sgs, VmeadL, X0, S0) {
     return best;
 }
 
-// Python SG conversion:  :contentReference[oaicite:12]{index=12}
+// Python SG conversion:
 // SG = 1 + (1 - YXS) * (S/V - F_SP) / ( ((1.05/0.79)*rho_eth)*(1 + MW_CO2/MW_eth) )
 function sugarToSG(S, VmeadL) {
     const denom = ((1.05 / 0.79) * RHO_ETH_kg_L) * (1 + (MW_CO2 / MW_ETH));
     return 1 + (1 - Y_XS) * ((S / VmeadL) - F_SP) / denom;
 }
 
-// Python S0 formula: :contentReference[oaicite:13]{index=13}
+// Python S0 formula:
 function initialSugarFromSG(SG0, VmeadL) {
     const denom = (1 - Y_XS);
     const factor = ((1.05 / 0.79) * RHO_ETH_kg_L) * (1 + (MW_CO2 / MW_ETH));
@@ -429,14 +476,14 @@ function initialSugarFromSG(SG0, VmeadL) {
 }
 
 // ---------- Replace SciPy differential evolution with a simple search ----------
-function fitMonodParams(times, sgs, VmeadL, X0, S0) {
+function fitMonodParams(times, sgs, VmeadL, X0, S0, rand = Math.random) {
     const sgMin = 0.996;
     const tMax = Math.max(...times);
-    const dt = 0.005; // days (smaller = more accurate, slower)
+    const dt = 0.01; // days (smaller = more accurate, slower)
     const nSteps = Math.max(2, Math.ceil(tMax / dt) + 1);
     const tGrid = linspace(0, tMax, nSteps);
 
-    // objective: SSE in SG space (same as python) :contentReference[oaicite:14]{index=14}
+    // objective: SSE in SG space
     function sse(muMax, Ks) {
         if (!(muMax >= MU_MIN && muMax <= MU_MAX && Ks >= KS_MIN && Ks <= KS_MAX)) return Infinity;
 
@@ -474,11 +521,11 @@ function fitMonodParams(times, sgs, VmeadL, X0, S0) {
     // random refine inside bounds
     for (let k = 0; k < 400; k++) {
         const mu = clamp(
-            best.muMax + (Math.random() - 0.5) * 0.2 * (MU_MAX - MU_MIN),
+            best.muMax + (rand() - 0.5) * 0.2 * (MU_MAX - MU_MIN),
             MU_MIN, MU_MAX
         );
         const ks = clamp(
-            best.Ks + (Math.random() - 0.5) * 0.2 * (KS_MAX - KS_MIN),
+            best.Ks + (rand() - 0.5) * 0.2 * (KS_MAX - KS_MIN),
             KS_MIN, KS_MAX
         );
         const e = sse(mu, ks);
@@ -623,10 +670,9 @@ if (!fermentationBtn) {
                 return;
             }
 
-            // Inputs
             const SG0 = num("starting_sg_tracking");
             const SG2 = num("second_sg_tracking");
-            const SG3 = num("third_sg_tracking"); // may be NaN
+            const SG3 = num("third_sg_tracking");
             const VmeadL = num("volume_of_brew_tracking");
             const yeastMassG = num("mass_of_yeast_tracking");
 
@@ -653,18 +699,52 @@ if (!fermentationBtn) {
             const tMeas = paired.map(p => p[0]);
             const sgMeas = paired.map(p => p[1]);
 
+            // ---- Option A: seeded RNG so repeated runs are identical ----
+            const seedStr = [
+                SG0, SG2, SG3, VmeadL, yeastMassG, t2, t3, tEnd,
+                ...tMeas, ...sgMeas
+            ].map(v => Number.isFinite(v) ? Number(v).toFixed(6) : "NaN").join("|");
+
+            const seed32 = xmur3(seedStr)();
+            const rand = mulberry32(seed32);
+
             const SG_MIN = 0.996;
             const SG_MAX = Math.max(...sgMeas);
 
-            const fit = fitLogisticBestFit(tMeas, sgMeas, SG_MIN, SG_MAX);
+            const fit = fitLogisticBestFit(tMeas, sgMeas, SG_MIN, SG_MAX, rand);
             let tGrid = linspace(0, tEnd, 400);
             tGrid = Array.from(new Set([...tGrid, ...tMeas])).sort((a, b) => a - b);
 
+            // ---- Pre-compute query time in days (so Monod sim can cover it even if tEnd is smaller) ----
+            let tQueryDaysForSim = NaN;
+
+            const day0_forSim = readLocalDateTimeAmpm("ft_day0_date", "ft_day0_hour", "ft_day0_min", "ft_day0_sec", "ft_day0_ampm");
+            const query_forSim = readLocalDateTimeAmpm("ft_query_date", "ft_query_hour", "ft_query_min", "ft_query_sec", "ft_query_ampm");
+            const dur_forSim = durationBetween(day0_forSim, query_forSim);
+
+            if (!dur_forSim?.error && Number.isFinite(dur_forSim?.totalDays)) {
+                tQueryDaysForSim = dur_forSim.totalDays;
+            }
+
+            // ---- Stable ODE simulation grid (decoupled from plotting) ----
+            const dtSim = 0.01; // days
+            const tSimEnd = Math.max(
+                tEnd,
+                ...tMeas,
+                Number.isFinite(tQueryDaysForSim) ? tQueryDaysForSim : 0
+            );
+            const nSim = Math.max(2, Math.ceil(tSimEnd / dtSim) + 1);
+            const tSim = linspace(0, tSimEnd, nSim);
+
             if (fit) {
-                const sgShape = tGrid.map(t => clamp(logisticSG(t, fit.k, fit.t0, SG_MIN, SG_MAX), SG_MIN, 1.5));
-                const abvShape = sgShape.map(sg => abvHmrc(SG0, sg));
-                updateChart(charts.sgShape, tGrid, sgShape);
-                updateChart(charts.abvShape, tGrid, abvShape);
+                const sgShapeSim = tSim.map(t => clamp(logisticSGDec(t, fit.k, fit.t0, SG_MIN, SG_MAX), SG_MIN, 1.5));
+                const abvShapeSim = sgShapeSim.map(sg => abvHmrc(SG0, sg));
+
+                const sgShapePlot = tGrid.map(t => interpAt(tSim, sgShapeSim, t));
+                const abvShapePlot = tGrid.map(t => interpAt(tSim, abvShapeSim, t));
+
+                updateChart(charts.sgShape, tGrid, sgShapePlot);
+                updateChart(charts.abvShape, tGrid, abvShapePlot);
             } else {
                 setFermentationDebug("Shape-fit could not be computed from the points provided.");
             }
@@ -677,23 +757,28 @@ if (!fermentationBtn) {
 
             if (tMeas.length === 3) {
                 // 3 points -> fit muMax, Ks, AND kd, then simulate with death
-                best = fitMonodParamsWithDeath(tMeas, sgMeas, VmeadL, X0, S0);
-                sim = simulateMonodWithDeath(best.muMax, best.Ks, best.kd, tGrid, X0, S0);
+                best = fitMonodParamsWithDeath(tMeas, sgMeas, VmeadL, X0, S0, rand);
+                sim = simulateMonodWithDeath(best.muMax, best.Ks, best.kd, tSim, X0, S0);
             } else {
                 // 2 points (or anything else) -> original model
-                best = fitMonodParams(tMeas, sgMeas, VmeadL, X0, S0);
-                sim = simulateMonod(best.muMax, best.Ks, tGrid, X0, S0);
+                best = fitMonodParams(tMeas, sgMeas, VmeadL, X0, S0, rand);
+                sim = simulateMonod(best.muMax, best.Ks, tSim, X0, S0);
             }
 
             const { X, S } = sim;
 
-            const sgMonod = S.map(s => Math.max(sugarToSG(s, VmeadL), SG_MIN));
-            const yeastConc = X;
-            const abvMonod = sgMonod.map(sg => abvHmrc(SG0, sg));
+            const sgMonodSim = S.map(s => Math.max(sugarToSG(s, VmeadL), SG_MIN));
+            const yeastSim = X;
+            const abvMonodSim = sgMonodSim.map(sg => abvHmrc(SG0, sg));
 
-            updateChart(charts.sgMonod, tGrid, sgMonod);
-            updateChart(charts.yeastMonod, tGrid, yeastConc);
-            updateChart(charts.abvMonod, tGrid, abvMonod);
+            const sgMonodPlot = tGrid.map(t => interpAt(tSim, sgMonodSim, t));
+            const yeastConcPlot = tGrid.map(t => interpAt(tSim, yeastSim, t));
+            const abvMonodPlot = tGrid.map(t => interpAt(tSim, abvMonodSim, t));
+
+            updateChart(charts.sgMonod, tGrid, sgMonodPlot);
+            updateChart(charts.yeastMonod, tGrid, yeastConcPlot);
+            updateChart(charts.abvMonod, tGrid, abvMonodPlot);
+
 
             // ---- Date/time query output ----
             const outEl = document.getElementById("ft_query_output");
@@ -719,9 +804,9 @@ if (!fermentationBtn) {
                     }
 
                     // Monod prediction at tQueryDays (interpolate from simulated arrays)
-                    const sgMonodAt = interpAt(tGrid, sgMonod, tQueryDays);
+                    const sgMonodAt = interpAt(tSim, sgMonodSim, tQueryDays);
                     const abvMonodAt = abvHmrc(SG0, sgMonodAt);
-                    const yeastAt = interpAt(tGrid, yeastConc, tQueryDays);
+                    const yeastAt = interpAt(tSim, yeastSim, tQueryDays);
 
                     const totals = formatTotalsLikeTimeScreen(dur);
                     const sWord = (dur.seconds === 1) ? "second" : "seconds";
