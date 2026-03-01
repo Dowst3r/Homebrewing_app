@@ -1056,18 +1056,16 @@ function setSelectOptions(selectEl, labels) {
 }
 
 function setFormFromDate(prefix, d) {
-    const mon = monthIndexToLabel(d.getMonth());
-    const day = d.getDate();
-    const year = d.getFullYear();
+    // Set the date input
+    const dateEl = getEl(`${prefix}_date`);
+    if (dateEl) dateEl.value = toDateInputValueLocal(d);
 
+    // Set the time inputs (12h)
     let hh = d.getHours();
     const isPm = hh >= 12;
     hh = hh % 12;
     if (hh === 0) hh = 12;
 
-    getEl(`${prefix}_month`).value = mon;
-    getEl(`${prefix}_day`).value = String(day);
-    getEl(`${prefix}_year`).value = String(year);
     getEl(`${prefix}_hour`).value = String(hh);
     getEl(`${prefix}_min`).value = String(d.getMinutes());
     getEl(`${prefix}_sec`).value = String(d.getSeconds());
@@ -1075,17 +1073,34 @@ function setFormFromDate(prefix, d) {
 }
 
 function readFormToDate(prefix) {
-    const monLabel = getEl(`${prefix}_month`)?.value;
-    const monthIndex = monthLabelToIndex(monLabel);
+    const dateStr = getEl(`${prefix}_date`)?.value;
+    const baseDate = fromDateInputValueLocal(dateStr);
 
-    const year = Number(getEl(`${prefix}_year`)?.value);
-    const day = Number(getEl(`${prefix}_day`)?.value);
+    const year = baseDate.getFullYear();
+    const monthIndex = baseDate.getMonth();
+    const day = baseDate.getDate();
+
     const hour12 = Number(getEl(`${prefix}_hour`)?.value);
     const minute = Number(getEl(`${prefix}_min`)?.value);
     const second = Number(getEl(`${prefix}_sec`)?.value);
     const ampm = getEl(`${prefix}_ampm`)?.value;
 
     return makeLocalDate({ year, monthIndex, day, hour12, minute, second, ampm });
+}
+
+function toDateInputValueLocal(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+}
+
+function fromDateInputValueLocal(value) {
+    // value is "YYYY-MM-DD"
+    if (!value || typeof value !== "string") return new Date(NaN);
+    const [y, m, d] = value.split("-").map(Number);
+    if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return new Date(NaN);
+    return new Date(y, m - 1, d); // local midnight
 }
 
 function formatTotals(x) {
@@ -1100,14 +1115,10 @@ function initTimeDurationScreen() {
     if (timeDurationInitDone) return;
     timeDurationInitDone = true;
 
-    const startMonth = getEl("td_start_month");
-    const endMonth = getEl("td_end_month");
     const out = getEl("td_output");
-    if (!startMonth || !endMonth || !out) return;
-
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    setSelectOptions(startMonth, months);
-    setSelectOptions(endMonth, months);
+    const startDate = getEl("td_start_date");
+    const endDate = getEl("td_end_date");
+    if (!out || !startDate || !endDate) return;
 
     // seed with your example so you can verify it matches the screenshot
     setFormFromDate("td_start", new Date(2026, 0, 18, 15, 44, 0));

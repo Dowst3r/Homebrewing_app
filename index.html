@@ -149,94 +149,69 @@
       <button class="back-home">← Home</button>
       <h2>Time Between Dates</h2>
 
-      <div class="time-between-card">
+      <h3 class="subhead">Start Time</h3>
 
-        <div class="time-between-section">
-          <h3 class="subhead">Start Time</h3>
+      <label>Start date
+        <input type="date" id="td_start_date">
+      </label>
 
-          <div class="time-between-grid">
-            <label>Month
-              <select id="td_start_month"></select>
-            </label>
-
-            <label>Day
-              <input id="td_start_day" type="number" min="1" max="31" value="1" inputmode="numeric">
-            </label>
-
-            <label>Year
-              <input id="td_start_year" type="number" min="1" max="9999" value="2026" inputmode="numeric">
-            </label>
-          </div>
-
-          <div class="time-between-grid grid-4">
-            <label>Hour
-              <input id="td_start_hour" type="number" min="1" max="12" value="12" inputmode="numeric">
-            </label>
-            <label>Minute
-              <input id="td_start_min" type="number" min="0" max="59" value="0" inputmode="numeric">
-            </label>
-            <label>Second
-              <input id="td_start_sec" type="number" min="0" max="59" value="0" inputmode="numeric">
-            </label>
-            <label>AM/PM
-              <select id="td_start_ampm">
-                <option value="a">AM</option>
-                <option value="p">PM</option>
-              </select>
-            </label>
-          </div>
-
-          <button id="td_start_now" class="Calculate_buttons secondary-btn" type="button">Set Start = Now</button>
-        </div>
-
-
-        <div class="time-between-section">
-          <h3 class="subhead">End Time</h3>
-
-          <div class="time-between-grid">
-            <label>Month
-              <select id="td_end_month"></select>
-            </label>
-            <label>Day
-              <input id="td_end_day" type="number" min="1" max="31" value="1" inputmode="numeric">
-            </label>
-            <label>Year
-              <input id="td_end_year" type="number" min="1" max="9999" value="2026" inputmode="numeric">
-            </label>
-          </div>
-
-          <div class="time-between-grid grid-4">
-            <label>Hour
-              <input id="td_end_hour" type="number" min="1" max="12" value="12" inputmode="numeric">
-            </label>
-            <label>Minute
-              <input id="td_end_min" type="number" min="0" max="59" value="0" inputmode="numeric">
-            </label>
-            <label>Second
-              <input id="td_end_sec" type="number" min="0" max="59" value="0" inputmode="numeric">
-            </label>
-            <label>AM/PM
-              <select id="td_end_ampm">
-                <option value="a">AM</option>
-                <option value="p">PM</option>
-              </select>
-            </label>
-          </div>
-
-          <button id="td_end_now" class="Calculate_buttons secondary-btn" type="button">Set End = Now</button>
-        </div>
-
-
-        <div class="time-between-actions">
-          <button id="td_calc" class="Calculate_buttons" type="button">Calculate</button>
-          <button id="td_clear" class="Calculate_buttons secondary-btn" type="button">Clear</button>
-        </div>
-
-        <pre id="td_output" class="result_box"></pre>
+      <div class="time-between-grid grid-4">
+        <label>Hour
+          <input id="td_start_hour" type="number" min="1" max="12" value="12" inputmode="numeric">
+        </label>
+        <label>Minute
+          <input id="td_start_min" type="number" min="0" max="59" value="0" inputmode="numeric">
+        </label>
+        <label>Second
+          <input id="td_start_sec" type="number" min="0" max="59" value="0" inputmode="numeric">
+        </label>
+        <label>AM/PM
+          <select id="td_start_ampm">
+            <option value="a">AM</option>
+            <option value="p">PM</option>
+          </select>
+        </label>
       </div>
+
+      <button id="td_start_now" class="Calculate_buttons secondary-btn" type="button">Set Start = Now</button>
+
+      <hr class="soft-rule"/>
+
+      <h3 class="subhead">End Time</h3>
+
+      <label>End date
+        <input id="td_end_date" type="date">
+      </label>
+
+      <div class="time-between-grid grid-4">
+        <label>Hour
+          <input id="td_end_hour" type="number" min="1" max="12" value="12" inputmode="numeric">
+        </label>
+        <label>Minute
+          <input id="td_end_min" type="number" min="0" max="59" value="0" inputmode="numeric">
+        </label>
+        <label>Second
+          <input id="td_end_sec" type="number" min="0" max="59" value="0" inputmode="numeric">
+        </label>
+        <label>AM/PM
+           <select id="td_end_ampm">
+            <option value="a">AM</option>
+            <option value="p">PM</option>
+          </select>
+        </label>
+      </div>
+
+      <button id="td_end_now" class="Calculate_buttons secondary-btn" type="button">Set End = Now</button>
+
+      <div class="time-between-actions">
+        <button id="td_calc" class="Calculate_buttons" type="button">Calculate</button>
+        <button id="td_clear" class="Calculate_buttons secondary-btn" type="button">Clear</button>
+      </div>
+
+      <pre id="td_output" class="result_box"></pre>
     </section>
 
-
+<!-- scipy optimise curve fit-->
 
 
 
