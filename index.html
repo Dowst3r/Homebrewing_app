@@ -16,7 +16,7 @@
 <body>
   <div class="app">
     <header class="app-header">
-      <h1>Mead Helper</h1>
+      <h1>Mead Helper - v1.0</h1>
       <button id="theme-toggle" class="icon-button" aria-label="Open settings">
         <img src="gear.png" alt="Settings">
       </button>
@@ -34,6 +34,7 @@
         <button class="home-button" data-target="screen-yeast-database">Yeast Database</button>
         <button class="home-button" data-target="screen-pH-database">pH Adjuster Database</button>
         <button class="home-button" data-target="screen-recipe-database">Saved Recipes</button>
+        <button class="home-button" data-target="app-explanation-pdf">App Help PDF</button>
       </div>
     </section>
 
@@ -524,6 +525,22 @@
     </div>
   </div>
   </div>
+
+
+
+  <section id="app-explanation-pdf" class="screen">
+    <button class="back-home">← Home</button>
+    <h2>App Help</h2>
+
+    <div class="pdf-frame-wrap">
+      <iframe
+        id="app_help_pdf_frame"
+        title="App Help PDF"
+        loading="lazy"
+        referrerpolicy="no-referrer"
+      ></iframe>
+    </div>
+  </section>
 
 
 
