@@ -7,6 +7,23 @@ import {
     monthLabelToIndex,
 } from './timeDuration.js';
 
+const APP_HELP_PDF_URL = "./app-explanation-v1.0.pdf";
+
+// If you already attach handlers for .home-button clicks,
+// just add the "if (target === ...)" block into your existing handler.
+// Otherwise you can use this:
+document.querySelectorAll('[data-target]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const target = btn.dataset.target;
+
+        if (target === "app-explanation-pdf") {
+            const frame = document.getElementById("app_help_pdf_frame");
+            if (frame && frame.src !== APP_HELP_PDF_URL) frame.src = APP_HELP_PDF_URL;
+        }
+
+        showScreen(target);
+    });
+});
 
 // ----- THEME HANDLING -----
 
@@ -71,6 +88,12 @@ if (darkModeCheckbox) {
 const screens = document.querySelectorAll('.screen');
 
 function showScreen(id) {
+    // If we're navigating away from the PDF screen, clear the iframe (saves memory on phones)
+    if (id !== "app-explanation-pdf") {
+        const frame = document.getElementById("app_help_pdf_frame");
+        if (frame) frame.src = "";
+    }
+
     screens.forEach(screen => {
         if (screen.id === id) {
             screen.classList.add('active');

@@ -799,7 +799,7 @@ if (!fermentationBtn) {
                     let sgShapeAt = NaN;
                     let abvShapeAt = NaN;
                     if (fit) {
-                        sgShapeAt = clamp(logisticSG(tQueryDays, fit.k, fit.t0, SG_MIN, SG_MAX), SG_MIN, 1.5);
+                        sgShapeAt = clamp(logisticSGDec(tQueryDays, fit.k, fit.t0, SG_MIN, SG_MAX), SG_MIN, 1.5);
                         abvShapeAt = abvHmrc(SG0, sgShapeAt);
                     }
 
