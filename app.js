@@ -150,7 +150,7 @@ async function openPdfInApp() {
         }
 
         pdfjs.GlobalWorkerOptions.workerSrc =
-            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/legacy/build/pdf.worker.min.js";
+            "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.worker.min.mjs";
 
         pdfDoc = await pdfjs.getDocument(APP_HELP_PDF_URL).promise;
         pdfPageNum = 1;
