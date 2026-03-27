@@ -7,18 +7,26 @@ import {
     monthLabelToIndex,
 } from './timeDuration.js';
 
-const APP_HELP_PDF_URL = "./app-explanation-v1.0.pdf";
+const APP_HELP_PDF_URL = "./app-explanation.pdf";
 
-// If you already attach handlers for .home-button clicks,
-// just add the "if (target === ...)" block into your existing handler.
-// Otherwise you can use this:
+function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+}
+
 document.querySelectorAll('[data-target]').forEach(btn => {
     btn.addEventListener('click', () => {
         const target = btn.dataset.target;
 
         if (target === "app-explanation-pdf") {
-            const frame = document.getElementById("app_help_pdf_frame");
-            if (frame && frame.src !== APP_HELP_PDF_URL) frame.src = APP_HELP_PDF_URL;
+            if (isIOS()) {
+                // iOS Safari: iframe PDF often only shows page 1; open native viewer instead
+                window.open(APP_HELP_PDF_URL, "_blank", "noopener,noreferrer");
+                return;
+            } else {
+                // Desktop/Android: iframe works fine
+                const frame = document.getElementById("app_help_pdf_frame");
+                if (frame && frame.src !== APP_HELP_PDF_URL) frame.src = APP_HELP_PDF_URL;
+            }
         }
 
         showScreen(target);
