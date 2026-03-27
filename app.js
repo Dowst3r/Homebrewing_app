@@ -143,7 +143,7 @@ function queueRenderPage(num) {
 async function openPdfInApp() {
     // This requires you added the <script src="...pdf.min.js"></script> in index.html
     const pdfjs = window.pdfjsLib; // or globalThis.pdfjsLib
-    if (!pdfjsLib) {
+    if (!pdfjs) {
         alert("PDF viewer failed to load (pdfjsLib missing). Check the pdf.js <script> tag in index.html.");
         return;
     }
