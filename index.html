@@ -532,13 +532,19 @@
     <button class="back-home">← Home</button>
     <h2>App Help</h2>
 
-    <div class="pdf-frame-wrap">
-      <iframe
-        id="app_help_pdf_frame"
-        title="App Help PDF"
-        loading="lazy"
-        referrerpolicy="no-referrer"
-      ></iframe>
+    <div class="pdf-toolbar">
+      <button id="pdf_prev" type="button">◀</button>
+      <span id="pdf_page_label">Page 1 / ?</span>
+      <button id="pdf_next" type="button">▶</button>
+
+      <span class="pdf-spacer"></span>
+
+      <button id="pdf_zoom_out" type="button">-</button>
+      <button id="pdf_zoom_in" type="button">+</button>
+    </div>
+
+    <div id="pdf_container" class="pdf-container">
+      <!--canvases get injected here-->
     </div>
   </section>
 
@@ -547,7 +553,7 @@
 
 
 
-
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script type="module" src="./fermentation.js"></script>
   <script type="module" src="./app.js"></script>
