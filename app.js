@@ -142,12 +142,7 @@ function queueRenderPage(num) {
 
 async function openPdfInApp() {
     try {
-        const pdfjs = window.pdfjsLib;
-
-        if (!pdfjs) {
-            alert("PDF viewer failed to load (pdfjsLib missing).");
-            return;
-        }
+        const pdfjs = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.min.mjs");
 
         pdfjs.GlobalWorkerOptions.workerSrc =
             "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.worker.min.mjs";
