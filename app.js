@@ -7,7 +7,7 @@ import {
     monthLabelToIndex,
 } from './timeDuration.js';
 
-const APP_HELP_PDF_URL = "./app-explanation.pdf";
+const APP_HELP_PDF_URL = "app-explanation-v1.0.pdf";
 
 function isIOS() {
     return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
