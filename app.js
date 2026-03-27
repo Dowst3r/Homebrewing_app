@@ -142,16 +142,17 @@ function queueRenderPage(num) {
 
 async function openPdfInApp() {
     // This requires you added the <script src="...pdf.min.js"></script> in index.html
-    if (typeof pdfjsLib === "undefined") {
+    const pdfjs = window.pdfjsLib; // or globalThis.pdfjsLib
+    if (!pdfjsLib) {
         alert("PDF viewer failed to load (pdfjsLib missing). Check the pdf.js <script> tag in index.html.");
         return;
     }
 
     // Tell PDF.js where its worker script is (must match your CDN version)
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
+    pdfjs.GlobalWorkerOptions.workerSrc =
         "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.4.168/pdf.worker.min.js";
 
-    pdfDoc = await pdfjsLib.getDocument(APP_HELP_PDF_URL).promise;
+    pdfDoc = await pdfjs.getDocument(APP_HELP_PDF_URL).promise;
     pdfPageNum = 1;
     setPdfLabel();
     await renderPdfPage(pdfPageNum);
