@@ -34,7 +34,7 @@
         <button class="home-button" data-target="screen-yeast-database">Yeast Database</button>
         <button class="home-button" data-target="screen-pH-database">pH Adjuster Database</button>
         <button class="home-button" data-target="screen-recipe-database">Saved Recipes</button>
-        <button class="home-button" data-target="app-explanation-pdf">App Help PDF</button>
+        <button class="home-button" data-target="screen-app-help">App Help</button>
       </div>
     </section>
 
@@ -75,20 +75,20 @@
         <input id="mead_target_abv_recipe" value="10" inputmode="decimal">
       </label>
 
-      <label>Honey type
+      <label>Honey
         <select id="mead_honey_select_recipe"></select>
       </label>
 
-      <label>Yeast type
+      <label>Yeast
         <select id="mead_yeast_select_recipe"></select>
       </label>
 
       <div class="checkbox-row">
         <input id="mead_use_fruit_recipe" type="checkbox">
-        <label for="mead_use_fruit_recipe">Use Fruit</label>
+        <label for="mead_use_fruit_recipe">Using Fruit?</label>
       </div>
 
-      <label>Fruit Type (optional)
+      <label>Fruit (optional)
         <input id="mead_fruit_type_recipe" placeholder="e.g. Blackberry" autocomplete="off">
       </label>
 
@@ -123,7 +123,9 @@
       <button id="abv-btn" class="Calculate_buttons">Calculate ABV</button>
       <p id="abv-output"></p>
     </section>
-    <!-- PLACEHOLDER SCREENS (you can fill these later) -->
+
+
+    <!-- pH SCREEN -->
     <section id="screen-ph" class="screen">
       <button class="back-home">← Home</button>
       <h2>pH Adjustment</h2>
@@ -136,7 +138,7 @@
       <label>Desired pH
         <input id="desired_pH" value="3.4" inputmode="decimal">
       </label>
-      <label>Adjuster
+      <label>Chemical adjuster
         <select id="ph_adjuster_select"></select>
       </label>
       <button id="ph-calc-btn" class="Calculate_buttons">Calculate pH Adjustment</button>
@@ -145,7 +147,7 @@
 
 
 
-    <!--Time between dates code-->
+    <!--TIME BETWEEN DATES CODE-->
     <section id="screen-time-duration" class="screen">
       <button class="back-home">← Home</button>
       <h2>Time Between Dates</h2>
@@ -211,8 +213,6 @@
 
       <pre id="td_output" class="result_box"></pre>
     </section>
-
-<!-- scipy optimise curve fit-->
 
 
 
@@ -505,49 +505,75 @@
     <button id="recipe-manual-add-btn" class="Calculate_buttons">Add Manual Recipe</button>
   </div>
   </section>
-  </div>
 
-
-
-  <div id="modal-overlay" class="modal-overlay hidden">
-  <div class="modal-card">
-    <h3 id="modal-title">Modal</h3>
-
-    <label id="modal-name-label" class="modal-label" for="modal-name-input">Recipe name</label>
-    <input id="modal-name-input" class="modal-input" type="text" placeholder="e.g., Orange Blossom Session Mead" />
-
-    <label id="modal-text-label" class="modal-label hidden" for="modal-text-input">Recipe text</label>
-    <textarea id="modal-text-input" class="modal-textarea hidden" rows="8" placeholder="Paste/type your recipe here..."></textarea>
-
-    <div class="modal-actions">
-      <button id="modal-cancel-btn" class="action-button secondary">Cancel</button>
-      <button id="modal-ok-btn" class="action-button">Save</button>
-    </div>
-  </div>
-  </div>
-
-
-
-  <section id="app-explanation-pdf" class="screen">
+  <section id="screen-app-help" class="screen">
     <button class="back-home">← Home</button>
     <h2>App Help</h2>
 
-    <div class="pdf-toolbar">
-      <button id="pdf_prev" type="button">◀</button>
-      <span id="pdf_page_label">Page 1 / ?</span>
-      <button id="pdf_next" type="button">▶</button>
+    <p class="help-intro">
+      Search or choose a section below. This help page is built from the same content used to generate the downloadable PDF.
+    </p>
 
-      <span class="pdf-spacer"></span>
+    <div class="help-actions">
+      <a href="app-explanation-v1.0.pdf" download class="Calculate_buttons secondary-btn">
+        Download Full PDF
+      </a>
 
-      <button id="pdf_zoom_out" type="button">-</button>
-      <button id="pdf_zoom_in" type="button">+</button>
+      <a href="app-explanation-v1.0.pdf" target="_blank" class="Calculate_buttons secondary-btn">
+        Open PDF
+      </a>
     </div>
 
-    <div id="pdf_container" class="pdf-container">
-      <!--canvases get injected here-->
-    </div>
+    <label>Search help
+      <input id="help-search" type="search" placeholder="e.g. honey, ABV, pH, recipes" autocomplete="off">
+    </label>
+
+    <nav id="help-toc" class="help-toc" aria-label="Help contents"></nav>
+
+    <div id="help-content" class="help-content"></div>
   </section>
 
+  <section id="screen-app-future" class="screen">
+    <button class="back-home">← Home</button>
+    <h2>Future Features</h2>
+    <h3>Coming soon:</h3>
+    <ul>
+      <li>How backsweetening changes the ABV of the mead.</li>
+      <li>A pop-up that ensures deleting intent in the databases.</li>
+      <li>an edit button for the database entries.</li>
+      <li>Removing double tap to zoom.</li>
+    </ul>
+    <h3>Long term:</h3>
+    <ul>
+      <li>Adding a fruit/vegetable database that includes informtation on when and where they are in-season.</li>
+      <li>Making this app work offline.</li>
+      <li>Database of common and popular homebrews (mainly for meads).</li>
+    </ul>
+  </section>
+
+
+
+
+
+
+  </div>
+
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <h3 id="modal-title">Modal</h3>
+
+      <label id="modal-name-label" class="modal-label" for="modal-name-input">Recipe name</label>
+      <input id="modal-name-input" class="modal-input" type="text" placeholder="e.g., Orange Blossom Session Mead" />
+
+      <label id="modal-text-label" class="modal-label hidden" for="modal-text-input">Recipe text</label>
+      <textarea id="modal-text-input" class="modal-textarea hidden" rows="8" placeholder="Paste/type your recipe here..."></textarea>
+
+      <div class="modal-actions">
+        <button id="modal-cancel-btn" class="action-button secondary">Cancel</button>
+        <button id="modal-ok-btn" class="action-button">Save</button>
+      </div>
+    </div>
+  </div>
 
 
 

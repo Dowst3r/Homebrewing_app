@@ -1,4 +1,5 @@
 import { abvHmrc, calculateMeadRecipe, calculatePhAdjustment } from './meadMath.js';
+import { renderHelp } from './help/renderHelp.js';
 import {
     durationBetween,
     formatDateTimeLabel,
@@ -6,8 +7,6 @@ import {
     monthIndexToLabel,
     monthLabelToIndex,
 } from './timeDuration.js';
-
-const APP_HELP_PDF_URL = "app-explanation-v1.0.pdf";
 
 // ----- THEME HANDLING -----
 
@@ -59,149 +58,41 @@ if (savedTheme === 'dark' || savedTheme === 'pink') {
     setTheme('light');
 }
 
-// When the switch in Settings changes
-if (darkModeCheckbox) {
-    darkModeCheckbox.addEventListener('change', () => {
-        const theme = darkModeCheckbox.checked ? 'dark' : 'light';
-        setTheme(theme);
-    });
-}
-
 // =====================
-// IN-APP PDF VIEWER (PDF.js)
+// APP HELP SCREEN (HTML)
 // =====================
 
-let pdfDoc = null;
-let pdfPageNum = 1;
-let pdfScale = 1.1;          // zoom factor (user adjustable)
-let pdfRendering = false;
-let pdfPendingPage = null;
+function initHelpScreen() {
+    const contentEl = document.getElementById("help-content");
+    const tocEl = document.getElementById("help-toc");
+    const searchEl = document.getElementById("help-search");
 
-function pdfEls() {
-    return {
-        container: document.getElementById("pdf_container"),
-        label: document.getElementById("pdf_page_label"),
-        prev: document.getElementById("pdf_prev"),
-        next: document.getElementById("pdf_next"),
-        zin: document.getElementById("pdf_zoom_in"),
-        zout: document.getElementById("pdf_zoom_out"),
-    };
-}
+    renderHelp({ contentEl, tocEl });
 
-function setPdfLabel() {
-    const { label } = pdfEls();
-    if (!label) return;
-    const total = pdfDoc ? pdfDoc.numPages : "?";
-    label.textContent = `Page ${pdfPageNum} / ${total}`;
-}
-
-function clearPdfContainer() {
-    const { container } = pdfEls();
-    if (container) container.innerHTML = "";
-}
-
-async function renderPdfPage(num) {
-    const { container } = pdfEls();
-    if (!pdfDoc || !container) return;
-
-    pdfRendering = true;
-    clearPdfContainer();
-
-    const page = await pdfDoc.getPage(num);
-
-    // Fit to container width (responsive)
-    const containerWidth = Math.max(100, container.clientWidth - 20);
-    const viewport1 = page.getViewport({ scale: 1 });
-    const fitScale = containerWidth / viewport1.width;
-    const viewport = page.getViewport({ scale: fitScale * pdfScale });
-
-    const canvas = document.createElement("canvas");
-    const ctx = canvas.getContext("2d", { alpha: false });
-
-    canvas.width = Math.floor(viewport.width);
-    canvas.height = Math.floor(viewport.height);
-
-    container.appendChild(canvas);
-
-    await page.render({ canvasContext: ctx, viewport }).promise;
-
-    pdfRendering = false;
-    setPdfLabel();
-
-    if (pdfPendingPage !== null) {
-        const next = pdfPendingPage;
-        pdfPendingPage = null;
-        renderPdfPage(next);
+    if (searchEl && !searchEl.dataset.wired) {
+        searchEl.dataset.wired = "1";
+        searchEl.addEventListener("input", () => {
+            filterHelpCards(searchEl.value);
+        });
     }
+
+    filterHelpCards(searchEl?.value || "");
 }
 
-function queueRenderPage(num) {
-    if (pdfRendering) pdfPendingPage = num;
-    else renderPdfPage(num);
+function filterHelpCards(query) {
+    const q = String(query || "").trim().toLowerCase();
+
+    document.querySelectorAll("#help-content .help-card").forEach((card) => {
+        const matches = !q || card.innerText.toLowerCase().includes(q);
+        card.classList.toggle("hidden", !matches);
+    });
 }
-
-async function openPdfInApp() {
-    try {
-        const pdfjs = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.min.mjs");
-
-        pdfjs.GlobalWorkerOptions.workerSrc =
-            "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.4.168/legacy/build/pdf.worker.min.mjs";
-
-        pdfDoc = await pdfjs.getDocument(APP_HELP_PDF_URL).promise;
-        pdfPageNum = 1;
-        setPdfLabel();
-        await renderPdfPage(pdfPageNum);
-    } catch (err) {
-        console.error("PDF load failed:", err);
-        alert("PDF failed to load: " + (err?.message || err));
-    }
-}
-
-function closePdfInApp() {
-    clearPdfContainer();
-    pdfDoc = null;
-    pdfPageNum = 1;
-    setPdfLabel();
-}
-
-// Hook up toolbar buttons (safe even if screen not visited yet)
-(function wirePdfToolbar() {
-    const { prev, next, zin, zout } = pdfEls();
-
-    prev?.addEventListener("click", () => {
-        if (!pdfDoc || pdfPageNum <= 1) return;
-        pdfPageNum--;
-        queueRenderPage(pdfPageNum);
-    });
-
-    next?.addEventListener("click", () => {
-        if (!pdfDoc || pdfPageNum >= pdfDoc.numPages) return;
-        pdfPageNum++;
-        queueRenderPage(pdfPageNum);
-    });
-
-    zin?.addEventListener("click", () => {
-        if (!pdfDoc) return;
-        pdfScale = Math.min(pdfScale + 0.15, 2.5);
-        queueRenderPage(pdfPageNum);
-    });
-
-    zout?.addEventListener("click", () => {
-        if (!pdfDoc) return;
-        pdfScale = Math.max(pdfScale - 0.15, 0.6);
-        queueRenderPage(pdfPageNum);
-    });
-})();
 
 // ----- SCREEN NAVIGATION -----
 
 const screens = document.querySelectorAll('.screen');
 
 function showScreen(id) {
-    // If we're navigating away from the PDF screen, clear the iframe (saves memory on phones)
-    if (id !== "app-explanation-pdf") {
-        closePdfInApp();
-    }
 
     screens.forEach(screen => {
         if (screen.id === id) {
@@ -236,8 +127,8 @@ function showScreen(id) {
         initTimeDurationScreen();
     }
 
-    if (id === "app-explanation-pdf") {
-        openPdfInApp();
+    if (id === "screen-app-help") {
+        initHelpScreen();
     }
 
 }
