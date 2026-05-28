@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Mead Helper App Help</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="help-print-page">
+    <h1>Mead Helper App Help</h1>
+    <p>This PDF is generated from the same help content used inside the app.</p>
+    <div id="help-content" class="help-content"></div>
+  </main>
+
+  <script type="module">
+    import { renderHelp } from "./help/renderHelp.js";
+    renderHelp({ contentEl: document.getElementById("help-content") });
+  </script>
+</body>
+</html>
