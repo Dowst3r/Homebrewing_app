@@ -5,7 +5,7 @@ export const helpSections = [
     {
         id: "mead-recipe",
         title: "Mead Recipe",
-        image: "/help/images/mead-recipe.png",
+        image: "help/images/mead-recipe.png",
         bodyHtml: `
             <p>This section is used to calculate the recipe details for your batch of homebrew.</p>
             <ul>
@@ -27,7 +27,7 @@ export const helpSections = [
     {
         id: "abv-calculator",
         title: "ABV Calculator",
-        image: "/help/images/abv-calculator.png",
+        image: "help/images/abv-calculator.png",
         bodyHtml: `
             <p>Use this screen to estimate alcohol percentage from a starting gravity and final gravity reading.</p>
             <ol>
@@ -41,7 +41,7 @@ export const helpSections = [
     {
         id: "time-between-dates",
         title: "Time Between Dates",
-        image: "/help/images/time-between-dates.png",
+        image: "help/images/time-between-dates.png",
         bodyHtml: `
             <p>Use this screen to calculate the exact time between two dates and times.</p>
             <p>It is useful for finding the time in decimals for tracking fermentation.</p>
@@ -51,7 +51,7 @@ export const helpSections = [
     {
         id: "ph-adjustment",
         title: "pH Adjustment",
-        image: "/help/images/ph-adjustment.png",
+        image: "help/images/ph-adjustment.png",
         bodyHtml: `
             <p>Use this screen to estimate the amount of an acid or base needed to move from a starting pH to a desired pH.</p>
             <p>The calculation is theoretical, so add chemicals in small steps and re-measure.</p>
@@ -62,7 +62,7 @@ export const helpSections = [
     {
         id: "databases",
         title: "Honey, Yeast and pH Databases",
-        image: "/help/images/databases.png",
+        image: "help/images/databases.png",
         bodyHtml: `
             <p>The database screens let you customise the ingredients and chemicals used by the calculators.</p>
             <ul>
@@ -76,7 +76,7 @@ export const helpSections = [
     {
         id: "saved-recipes",
         title: "Saved Recipes",
-        image: "/help/images/saved-recipes.png",
+        image: "help/images/saved-recipes.png",
         bodyHtml: `
             <p>Use this screen to view recipes you have saved from the Mead Recipe screen or added manually.</p>
             <p>You can export/print individual recipes or all saved recipes as a PDF using the export buttons.</p>
