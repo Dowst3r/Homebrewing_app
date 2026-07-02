@@ -16,7 +16,7 @@
 <body>
   <div class="app">
     <header class="app-header">
-      <h1>Mead Helper - v1.0</h1>
+      <h1>Mead Helper - v1.2</h1>
       <button id="theme-toggle" class="icon-button" aria-label="Open settings">
         <img src="gear.png" alt="Settings">
       </button>
@@ -35,6 +35,7 @@
         <button class="home-button" data-target="screen-pH-database">pH Adjuster Database</button>
         <button class="home-button" data-target="screen-recipe-database">Saved Recipes</button>
         <button class="home-button" data-target="screen-app-help">App Help</button>
+        <button class="home-button" data-target="screen-app-future">Future and Past Features</button>
       </div>
     </section>
 
@@ -540,15 +541,25 @@
     <ul>
       <li>How backsweetening changes the ABV of the mead.</li>
       <li>A pop-up that ensures deleting intent in the databases.</li>
-      <li>an edit button for the database entries.</li>
+      <li>An edit button for the database entries.</li>
       <li>Removing double tap to zoom.</li>
+      <li>PDF download on help page produces a nicer document.</li>
     </ul>
     <h3>Long term:</h3>
     <ul>
       <li>Adding a fruit/vegetable database that includes informtation on when and where they are in-season.</li>
-      <li>Making this app work offline.</li>
       <li>Database of common and popular homebrews (mainly for meads).</li>
     </ul>
+    <h2>Additions in Each Versions:</h2>
+    <h3>1.2</h3>
+    <li>List of features added in each version</li>
+    <li>App works offline (app must be loaded online first)</li>
+    <li>Name change from "Future Features" to "Future and Past Features"</li>
+    <h3>1.1</h3>
+    <li>Addition of "Future Features" (now "Future and Past Features) tab to show what features are being/going to be worked on for future releases</li>
+    <li>Change of the help screen being a PDF into a full page with the option to download the PDF version</li>
+    <h3>1.0</h3>
+    <li>Initial Release of the webpage/app</li>
   </section>
 
 
@@ -579,8 +590,16 @@
 
 
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="./vendor/chart.umd.js"></script>
   <script type="module" src="./fermentation.js"></script>
   <script type="module" src="./app.js"></script>
+
+  <script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./service-worker.js");
+    });
+  }
+  </script>
 </body>
 </html>
