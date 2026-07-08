@@ -7,7 +7,7 @@ export const MW_CO2 = 44.01;
 export const MW_ETH = 46.069;
 export const RHO_ETH = 789.45;
 export const RHO_WATER = 998.00; // TO BE CHANGED WHEN BACK HOME!!!!!!!!!!!!!!!!! SG of water at T room and multiply by reference density
-export const FRACTION_FERMENTABLE = 0.925;
+export const FRACTION_FERMENTABLE = 1;
 
 // ---- ABV + OG helpers ----
 function platoFromSgLincoln(sg) {
@@ -17,12 +17,12 @@ function platoFromSgLincoln(sg) {
 }
 
 
-// ASBC Beer-4A-style ABV (%), OG/FG in 1.xxx SG
+// https://www.scribd.com/document/627502235/2014-WC-Gary-Spedding-ABV-testing & https://www.mdpi.com/2076-3417/9/16/3250 are the URLs for these equations
 export function abvHmrc(og, fg) {
   const OG = Number(og);
   const FG = Number(fg);
 
-  const OE = platoFromSgLincoln(OG);
+  const OE = platoFromSgLincoln(OG); // Turning into degrees Plato for equation
   const AE = platoFromSgLincoln(FG);
 
   const ABW = (0.8192 * (OE - AE)) / (2.0665 - 0.010665 * OE);
@@ -40,11 +40,11 @@ export function ogForTargetAbv(fgSg, abvTarget) {
   const ABW = ABV * (0.7907 / FG);
 
   // 2. Calculate AE (Apparent Extract in Plato) from FG
-  const AE = platoFromSgLincoln(FG);
+  const AE = platoFromSgLincoln(FG); // turning the final gravity of 0.996 into degrees Plato
 
   // 3. Solve for OE (Original Extract in Plato)
   // Derived from: ABW = (0.8192 * (OE - AE)) / (2.0665 - 0.010665 * OE)
-  const OE = (2.0665 * ABW + 0.8192 * AE) / (0.8192 + 0.010665 * ABW);
+  const OE = (2.0665 * ABW + 0.8192 * AE) / (0.8192 + 0.010665 * ABW); // Re-arranging to find original gravity in degrees Plato from the degrees Plato version of 0.996 and the desired ABV
 
   // 4. Convert Plato back to SG (Specific Gravity)
   // Derived from the Lincoln Plato equation: P = (258.6 * s) / (1 + LINCOLN_B * s)

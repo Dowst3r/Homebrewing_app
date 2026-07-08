@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>Mead Maker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="/mead_calculation_icon.ico" sizes="any">
-  <link rel="shortcut icon" href="/mead_calculation_icon.ico">
+  <link rel="icon" href="./mead_calculation_icon.ico" sizes="any">
+  <link rel="shortcut icon" href="./mead_calculation_icon.ico">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Homebrewing">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -536,30 +536,40 @@
 
   <section id="screen-app-future" class="screen">
     <button class="back-home">← Home</button>
-    <h2>Future Features</h2>
-    <h3>Coming soon:</h3>
+    <h3>Future Features:</h3>
     <ul>
       <li>How backsweetening changes the ABV of the mead.</li>
-      <li>A pop-up that ensures deleting intent in the databases.</li>
-      <li>An edit button for the database entries.</li>
-      <li>Removing double tap to zoom.</li>
       <li>PDF download on help page produces a nicer document.</li>
-    </ul>
-    <h3>Long term:</h3>
-    <ul>
       <li>Adding a fruit/vegetable database that includes informtation on when and where they are in-season.</li>
       <li>Database of common and popular homebrews (mainly for meads).</li>
     </ul>
-    <h2>Additions in Each Versions:</h2>
+    <h3>1.2.2</h3>
+    <ul>
+      <li>An edit button for the database entries.</li>
+      <li>A pop-up that ensures deleting intent in the databases.</li>
+    </ul>
+    <h3>Previous Releases:</h3>
+    <h3>1.2.1:</h3>
+    <ul>
+      <li>Removing double tap to zoom.</li>
+      <li>Alteration of the mead maths to fix predicted specific gravity result in recipe page output.</li>
+      <li>Adding in alternative calculation methods for SG in recipes but also in other areas of the app.</li>
+    </ul>
     <h3>1.2</h3>
-    <li>List of features added in each version</li>
-    <li>App works offline (app must be loaded online first)</li>
-    <li>Name change from "Future Features" to "Future and Past Features"</li>
+    <ul>
+      <li>List of features added in each version</li>
+      <li>App works offline (app must be loaded online first)</li>
+      <li>Name change from "Future Features" to "Future and Past Features"</li>
+    </ul>
     <h3>1.1</h3>
-    <li>Addition of "Future Features" (now "Future and Past Features) tab to show what features are being/going to be worked on for future releases</li>
-    <li>Change of the help screen being a PDF into a full page with the option to download the PDF version</li>
+    <ul>
+      <li>Addition of "Future Features" (now "Future and Past Features) tab to show what features are being/going to be worked on for future releases</li>
+      <li>Change of the help screen being a PDF into a full page with the option to download the PDF version</li>
+    </ul>
     <h3>1.0</h3>
-    <li>Initial Release of the webpage/app</li>
+    <ul>
+      <li>Initial Release of the webpage/app</li>
+    </ul>
   </section>
 
 
@@ -596,8 +606,18 @@
 
   <script>
   if ("serviceWorker" in navigator) {
+    let refreshing = false;
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    });
+
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker.js");
+      navigator.serviceWorker.register("./service-worker.js").then(registration => {
+        registration.update();
+      });
     });
   }
   </script>

@@ -90,19 +90,15 @@ function filterHelpCards(query) {
 
 // ----- SCREEN NAVIGATION -----
 
-const screens = document.querySelectorAll('.screen');
+// ----- SCREEN NAVIGATION -----
 
-function showScreen(id) {
+const screens = document.querySelectorAll(".screen");
 
-    screens.forEach(screen => {
-        if (screen.id === id) {
-            screen.classList.add('active');
-        } else {
-            screen.classList.remove('active');
-        }
-    });
+let currentScreenId = "screen-home";
+let screenHistory = [];
 
-    if (id === 'screen-mead-recipe') {
+function runScreenSetup(id) {
+    if (id === "screen-mead-recipe") {
         fillHoneyDropdown();
         fillYeastDropdown();
     }
@@ -130,33 +126,115 @@ function showScreen(id) {
     if (id === "screen-app-help") {
         initHelpScreen();
     }
+}
 
+function showScreen(id) {
+    const targetScreen = document.getElementById(id);
+    if (!targetScreen) return;
+
+    screens.forEach(screen => {
+        screen.classList.toggle("active", screen.id === id);
+    });
+
+    currentScreenId = id;
+    runScreenSetup(id);
+
+    // Make each new screen feel like a fresh app page
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+}
+
+function navigateToScreen(id) {
+    if (!id || id === currentScreenId) return;
+
+    screenHistory.push(currentScreenId);
+    showScreen(id);
+}
+
+function navigateHome() {
+    screenHistory = [];
+    showScreen("screen-home");
+}
+
+function goBackScreen() {
+    if (currentScreenId === "screen-home") return;
+
+    const previousScreen = screenHistory.pop() || "screen-home";
+    showScreen(previousScreen);
 }
 
 // Home grid buttons
-document.querySelectorAll('[data-target]').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const target = btn.dataset.target;
-        showScreen(target);
+document.querySelectorAll("[data-target]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        navigateToScreen(btn.dataset.target);
     });
 });
 
 // Back to home buttons
-document.querySelectorAll('.back-home').forEach(btn => {
-    btn.addEventListener('click', () => {
-        showScreen('screen-home');
+document.querySelectorAll(".back-home").forEach(btn => {
+    btn.addEventListener("click", () => {
+        navigateHome();
     });
 });
 
 // Clicking the gear opens the settings screen
 if (settingsButton) {
-    settingsButton.addEventListener('click', () => {
-        showScreen('screen-settings');
+    settingsButton.addEventListener("click", () => {
+        navigateToScreen("screen-settings");
     });
 }
 
+// ----- PHONE BACK-SWIPE GESTURE -----
+// Swipe right from the left edge to go back one app screen.
+
+const BACK_SWIPE_EDGE_PX = 36;
+const BACK_SWIPE_MIN_X = 80;
+const BACK_SWIPE_MAX_Y = 60;
+
+let backSwipeTracking = false;
+let backSwipeStartX = 0;
+let backSwipeStartY = 0;
+
+function shouldIgnoreBackSwipeTarget(target) {
+    return !!target.closest(
+        "input, textarea, select, button, a, canvas, .table-wrapper, .table-wrap, .charts-wrap, .modal-overlay"
+    );
+}
+
+document.addEventListener("touchstart", event => {
+    if (currentScreenId === "screen-home") return;
+    if (event.touches.length !== 1) return;
+    if (shouldIgnoreBackSwipeTarget(event.target)) return;
+
+    const touch = event.touches[0];
+
+    // Only start a back gesture from the left edge of the screen
+    if (touch.clientX > BACK_SWIPE_EDGE_PX) return;
+
+    backSwipeTracking = true;
+    backSwipeStartX = touch.clientX;
+    backSwipeStartY = touch.clientY;
+}, { passive: true });
+
+document.addEventListener("touchend", event => {
+    if (!backSwipeTracking) return;
+
+    const touch = event.changedTouches[0];
+    const dx = touch.clientX - backSwipeStartX;
+    const dy = touch.clientY - backSwipeStartY;
+
+    backSwipeTracking = false;
+
+    const isBackSwipe =
+        dx >= BACK_SWIPE_MIN_X &&
+        Math.abs(dy) <= BACK_SWIPE_MAX_Y;
+
+    if (isBackSwipe) {
+        goBackScreen();
+    }
+}, { passive: true });
+
 // Start on home screen
-showScreen('screen-home');
+showScreen("screen-home");
 
 // ----- ABV CALCULATOR -----
 
