@@ -266,6 +266,9 @@ const honeySugarInput = document.getElementById('honey-sugar-input');
 const honeyPriceInput = document.getElementById('honey-price-bottle-input');
 const honeyMassInput = document.getElementById('honey-mass-bottle-input')
 const honeyAddBtn = document.getElementById('honey-add-btn');
+const honeyCancelEditBtn = document.getElementById('honey-cancel-edit-btn');
+
+let honeyEditIndex = null;
 
 // Default entries
 const defaultHoneyDb = [
@@ -309,6 +312,35 @@ function loadHoneyDb() {
 
 let honeyDb = loadHoneyDb();
 
+function resetHoneyEditor() {
+    honeyEditIndex = null;
+
+    honeyNameInput.value = '';
+    honeySugarInput.value = '';
+    honeyPriceInput.value = '';
+    honeyMassInput.value = '';
+
+    honeyAddBtn.textContent = 'Add';
+    honeyCancelEditBtn?.classList.add('hidden');
+}
+
+function beginHoneyEdit(index) {
+    const entry = honeyDb[index];
+    if (!entry) return;
+
+    honeyEditIndex = index;
+
+    honeyNameInput.value = entry.name;
+    honeySugarInput.value = entry.sugar;
+    honeyPriceInput.value = entry.price;
+    honeyMassInput.value = entry.mass;
+
+    honeyAddBtn.textContent = 'Save changes';
+    honeyCancelEditBtn?.classList.remove('hidden');
+
+    honeyNameInput.focus();
+}
+
 
 function saveHoneyDb() {
     localStorage.setItem('honeyDb', JSON.stringify(honeyDb));
@@ -333,33 +365,50 @@ function renderHoneyTable() {
         const tdMass = document.createElement('td');
         tdMass.textContent = entry.mass.toString();
 
-        // Delete button column
-        const tdDelete = document.createElement('td');
-        const delBtn = document.createElement('button');
-        delBtn.textContent = '✕';
-        delBtn.className = 'delete-btn';
-        delBtn.title = 'Delete this honey';
-        delBtn.addEventListener('click', () => {
-            if (confirm(`Delete "${entry.name}"?`)) {
-                honeyDb.splice(index, 1);
-                saveHoneyDb();
-                renderHoneyTable();
-                fillHoneyDropdown();
-            }
+        const tdActions = document.createElement('td');
+        tdActions.className = 'table-action-cell';
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.textContent = 'Edit';
+        editBtn.className = 'edit-btn';
+        editBtn.title = `Edit ${entry.name}`;
+        editBtn.addEventListener('click', () => {
+            beginHoneyEdit(index);
         });
 
-        tdDelete.appendChild(delBtn);
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.textContent = '✕';
+        delBtn.className = 'delete-btn';
+        delBtn.title = `Delete ${entry.name}`;
+        delBtn.addEventListener('click', () => {
+            const confirmed = confirm(
+                `Delete "${entry.name}"?\n\nThis cannot be undone.`
+            );
+
+            if (!confirmed) return;
+
+            honeyDb.splice(index, 1);
+            saveHoneyDb();
+            resetHoneyEditor();
+            renderHoneyTable();
+            fillHoneyDropdown();
+        });
+
+        tdActions.append(editBtn, delBtn);
+
         tr.appendChild(tdName);
         tr.appendChild(tdSugar);
         tr.appendChild(tdPrice);
         tr.appendChild(tdMass);
-        tr.appendChild(tdDelete);
+        tr.appendChild(tdActions);
 
         honeyTableBody.appendChild(tr);
     });
 }
 
-// Add button
+// Add or save edited honey
 if (honeyAddBtn) {
     honeyAddBtn.addEventListener('click', () => {
         const name = (honeyNameInput.value || '').trim();
@@ -367,28 +416,39 @@ if (honeyAddBtn) {
         const price = parseFloat(honeyPriceInput.value);
         const mass = parseFloat(honeyMassInput.value);
 
-        if (!name || Number.isNaN(sugar) || Number.isNaN(price) || Number.isNaN(mass)) {
+        if (
+            !name ||
+            Number.isNaN(sugar) ||
+            Number.isNaN(price) ||
+            Number.isNaN(mass)
+        ) {
             alert('Please fill in name, sugar, price and mass.');
             return;
         }
 
-        honeyDb.push({ name, sugar, price, mass });
+        const entry = { name, sugar, price, mass };
+
+        if (honeyEditIndex === null) {
+            honeyDb.push(entry);
+        } else {
+            honeyDb[honeyEditIndex] = entry;
+        }
+
         saveHoneyDb();
         renderHoneyTable();
         fillHoneyDropdown();
-
-        honeyNameInput.value = '';
-        honeySugarInput.value = '';
-        honeyPriceInput.value = '';
-        honeyMassInput.value = '';
+        resetHoneyEditor();
     });
 }
+
+honeyCancelEditBtn?.addEventListener('click', resetHoneyEditor);
 
 // ----- MEAD RECIPE (Design) -----
 
 const meadVolInput = document.getElementById('mead_volume_l_recipe');
 const meadFgInput = document.getElementById('mead_final_gravity_recipe');
 const meadAbvInput = document.getElementById('mead_target_abv_recipe');
+const meadFermentableInput = document.getElementById('mead_fermentable_pct_recipe');
 const meadHoneySelect = document.getElementById('mead_honey_select_recipe');
 const meadYeastSelect = document.getElementById('mead_yeast_select_recipe');
 const meadUseFruit = document.getElementById('mead_use_fruit_recipe');
@@ -439,9 +499,20 @@ if (meadBtn) {
         const volumeL = parseFloat(meadVolInput?.value);
         const finalGravity = parseFloat(meadFgInput?.value);
         const targetAbv = parseFloat(meadAbvInput?.value);
+        const fermentablePct = parseFloat(meadFermentableInput?.value);
 
         if (!Number.isFinite(volumeL) || !Number.isFinite(finalGravity) || !Number.isFinite(targetAbv)) {
             meadOut.textContent = 'Please enter valid numbers for volume, FG and ABV.';
+            return;
+        }
+
+        if (
+            !Number.isFinite(fermentablePct) ||
+            fermentablePct <= 0 ||
+            fermentablePct > 100
+        ) {
+            meadOut.textContent =
+                'Percentage fermentable must be greater than 0 and no more than 100.';
             return;
         }
 
@@ -480,6 +551,7 @@ if (meadBtn) {
             pricePerContainer,
             massPerContainerG,
             yeastNRequirement,
+            fermentablePct,
         });
 
         const fruitUsed = !!meadUseFruit?.checked;
@@ -489,6 +561,7 @@ if (meadBtn) {
         text += `Honey type: ${honey.name}\n`;
         text += `Yeast: ${yeast.name} (N Requirement: ${yeastNRequirement})\n`;
         text += `Fruit used: ${fruitUsed ? `Yes${fruitType ? ' - ' + fruitType : ''}` : 'No'}\n\n`;
+        text += `Percentage fermentable: ${fmt(fermentablePct, 1)}%\n\n`;
 
         text += `Desired ABV: ${fmt(targetAbv, 1)}%\n`;
         text += `Final gravity target: ${fmt(finalGravity, 3)}\n`;
@@ -557,6 +630,9 @@ const yeastNReqInput = document.getElementById("yeast_nreq_input_yeastdb");
 const yeastPacketWeightInput = document.getElementById("yeast_packet_weight_input_yeastdb");
 const yeastCostInput = document.getElementById("yeast_cost_input_yeastdb");
 const yeastAddBtn = document.getElementById("yeast_add_btn_yeastdb");
+const yeastCancelEditBtn = document.getElementById("yeast-cancel-edit-btn");
+
+let yeastEditIndex = null;
 
 // Load/save
 function loadYeastDb() {
@@ -589,6 +665,35 @@ function loadYeastDb() {
 
 let yeastDb = loadYeastDb();
 
+function resetYeastEditor() {
+    yeastEditIndex = null;
+
+    yeastNameInput.value = "";
+    yeastPacketWeightInput.value = "";
+    yeastCostInput.value = "";
+    yeastNReqInput.value = "Medium";
+
+    yeastAddBtn.textContent = "Add";
+    yeastCancelEditBtn?.classList.add("hidden");
+}
+
+function beginYeastEdit(index) {
+    const entry = yeastDb[index];
+    if (!entry) return;
+
+    yeastEditIndex = index;
+
+    yeastNameInput.value = entry.name;
+    yeastNReqInput.value = entry.nReq;
+    yeastPacketWeightInput.value = entry.packetWeight;
+    yeastCostInput.value = entry.costPerPacket;
+
+    yeastAddBtn.textContent = "Save changes";
+    yeastCancelEditBtn?.classList.remove("hidden");
+
+    yeastNameInput.focus();
+}
+
 function saveYeastDb() {
     localStorage.setItem("yeastDb", JSON.stringify(yeastDb));
 }
@@ -614,34 +719,51 @@ function renderYeastTable() {
         const tdCost = document.createElement("td");
         tdCost.textContent = `${y.costPerPacket.toFixed(2)}`;
 
-        const tdDel = document.createElement("td");
-        const delBtn = document.createElement("button");
-        delBtn.textContent = "✕";
-        delBtn.className = "delete-btn";
-        delBtn.title = "Delete this yeast";
+        const tdActions = document.createElement("td");
+        tdActions.className = "table-action-cell";
 
-        delBtn.addEventListener("click", () => {
-            if (confirm(`Delete "${y.name}"?`)) {
-                yeastDb.splice(idx, 1);
-                saveYeastDb();
-                renderYeastTable();
-            }
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.textContent = "Edit";
+        editBtn.className = "edit-btn";
+        editBtn.title = `Edit ${y.name}`;
+        editBtn.addEventListener("click", () => {
+            beginYeastEdit(idx);
         });
 
-        tdDel.appendChild(delBtn);
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.textContent = "✕";
+        delBtn.className = "delete-btn";
+        delBtn.title = `Delete ${y.name}`;
 
+        delBtn.addEventListener("click", () => {
+            const confirmed = confirm(
+                `Delete "${y.name}"?\n\nThis cannot be undone.`
+            );
+
+            if (!confirmed) return;
+
+            yeastDb.splice(idx, 1);
+            saveYeastDb();
+            resetYeastEditor();
+            renderYeastTable();
+            fillYeastDropdown();
+        });
+
+        tdActions.append(editBtn, delBtn);
 
         tr.appendChild(tdName);
         tr.appendChild(tdNReq);
         tr.appendChild(tdWeight);
         tr.appendChild(tdCost);
-        tr.appendChild(tdDel);
+        tr.appendChild(tdActions);
 
         yeastTableBody.appendChild(tr);
     });
 }
 
-// Add handler
+// Add or save edited yeast
 if (yeastAddBtn) {
     yeastAddBtn.addEventListener("click", () => {
         const name = (yeastNameInput?.value || "").trim();
@@ -653,30 +775,43 @@ if (yeastAddBtn) {
             alert("Please enter a yeast name.");
             return;
         }
+
         if (!["Low", "Medium", "High"].includes(nReq)) {
             alert("N Requirement must be Low, Medium, or High.");
             return;
         }
+
         if (!Number.isFinite(packetWeight) || packetWeight <= 0) {
             alert("Packet weight must be a positive number.");
             return;
         }
+
         if (!Number.isFinite(costPerPacket) || costPerPacket < 0) {
             alert("Cost per packet must be a valid number.");
             return;
         }
 
-        yeastDb.push({ name, nReq, packetWeight, costPerPacket });
+        const entry = {
+            name,
+            nReq,
+            packetWeight,
+            costPerPacket
+        };
+
+        if (yeastEditIndex === null) {
+            yeastDb.push(entry);
+        } else {
+            yeastDb[yeastEditIndex] = entry;
+        }
+
         saveYeastDb();
         renderYeastTable();
-
-        // clear inputs
-        yeastNameInput.value = "";
-        yeastPacketWeightInput.value = "";
-        yeastCostInput.value = "";
-        yeastNReqInput.value = "Medium";
+        fillYeastDropdown();
+        resetYeastEditor();
     });
 }
+
+yeastCancelEditBtn?.addEventListener("click", resetYeastEditor);
 
 // ----- pH ADJUSTER DATABASE -----
 
@@ -687,6 +822,9 @@ const phHPerMolInput = document.getElementById("ph-hplus-per-mol-input");
 const phMolarMassInput = document.getElementById("ph-molar-mass-input");
 const phNotesInput = document.getElementById("ph-notes-input");
 const phAddBtn = document.getElementById("ph-add-btn");
+const phCancelEditBtn = document.getElementById("ph-cancel-edit-btn");
+
+let phEditIndex = null;
 
 const phSelect = document.getElementById("ph_adjuster_select");
 const phCalcBtn = document.getElementById("ph-calc-btn");
@@ -700,6 +838,37 @@ const defaultPhDb = [
 ];
 
 let phDb = [];
+
+function resetPhEditor() {
+    phEditIndex = null;
+
+    phNameInput.value = "";
+    phTypeInput.value = "acid";
+    phHPerMolInput.value = "";
+    phMolarMassInput.value = "";
+    phNotesInput.value = "";
+
+    phAddBtn.textContent = "Add";
+    phCancelEditBtn?.classList.add("hidden");
+}
+
+function beginPhEdit(index) {
+    const entry = phDb[index];
+    if (!entry) return;
+
+    phEditIndex = index;
+
+    phNameInput.value = entry.name;
+    phTypeInput.value = entry.type;
+    phHPerMolInput.value = entry.hPerMol;
+    phMolarMassInput.value = entry.molarMass;
+    phNotesInput.value = entry.notes || "";
+
+    phAddBtn.textContent = "Save changes";
+    phCancelEditBtn?.classList.remove("hidden");
+
+    phNameInput.focus();
+}
 
 function savePhDb() {
     localStorage.setItem("phAdjusterDb", JSON.stringify(phDb));
@@ -743,20 +912,40 @@ function renderPhTable() {
         const tdNotes = document.createElement("td");
         tdNotes.textContent = a.notes || "";
 
-        const tdDel = document.createElement("td");
-        const btn = document.createElement("button");
-        btn.textContent = "✕";
-        btn.className = "delete-btn";
-        btn.title = "Delete this pH adjuster";
-        btn.addEventListener("click", () => {
+        const tdActions = document.createElement("td");
+        tdActions.className = "table-action-cell";
+
+        const editBtn = document.createElement("button");
+        editBtn.type = "button";
+        editBtn.textContent = "Edit";
+        editBtn.className = "edit-btn";
+        editBtn.title = `Edit ${a.name}`;
+        editBtn.addEventListener("click", () => {
+            beginPhEdit(idx);
+        });
+
+        const delBtn = document.createElement("button");
+        delBtn.type = "button";
+        delBtn.textContent = "✕";
+        delBtn.className = "delete-btn";
+        delBtn.title = `Delete ${a.name}`;
+        delBtn.addEventListener("click", () => {
+            const confirmed = confirm(
+                `Delete "${a.name}"?\n\nThis cannot be undone.`
+            );
+
+            if (!confirmed) return;
+
             phDb.splice(idx, 1);
             savePhDb();
+            resetPhEditor();
             renderPhTable();
             fillPhDropdown();
         });
-        tdDel.appendChild(btn);
 
-        tr.append(tdName, tdType, tdStoich, tdMW, tdNotes, tdDel);
+        tdActions.append(editBtn, delBtn);
+
+        tr.append(tdName, tdType, tdStoich, tdMW, tdNotes, tdActions);
         phTableBody.appendChild(tr);
     });
 }
@@ -780,22 +969,43 @@ if (phAddBtn) {
         const molarMass = Number(phMolarMassInput?.value);
         const notes = (phNotesInput?.value || "").trim();
 
-        if (!name || !["acid", "base"].includes(type) || !Number.isFinite(hPerMol) || !Number.isFinite(molarMass)) {
+        if (
+            !name ||
+            !["acid", "base"].includes(type) ||
+            !Number.isFinite(hPerMol) ||
+            !Number.isFinite(molarMass)
+        ) {
             alert("Fill name, type, H+ per mol, and molar mass.");
             return;
         }
 
-        phDb.push({ name, type, hPerMol, molarMass, notes });
+        if (hPerMol <= 0 || molarMass <= 0) {
+            alert("H+ per mol and molar mass must be positive numbers.");
+            return;
+        }
+
+        const entry = {
+            name,
+            type,
+            hPerMol,
+            molarMass,
+            notes
+        };
+
+        if (phEditIndex === null) {
+            phDb.push(entry);
+        } else {
+            phDb[phEditIndex] = entry;
+        }
+
         savePhDb();
         renderPhTable();
         fillPhDropdown();
-
-        phNameInput.value = "";
-        phHPerMolInput.value = "";
-        phMolarMassInput.value = "";
-        phNotesInput.value = "";
+        resetPhEditor();
     });
 }
+
+phCancelEditBtn?.addEventListener("click", resetPhEditor);
 
 if (phCalcBtn) {
     phCalcBtn.addEventListener("click", () => {
@@ -985,36 +1195,88 @@ function renderRecipeTable() {
         tdText.textContent = preview.length > 140 ? preview.slice(0, 140) + "…" : preview;
         tdText.title = r.text || "";
 
-        const tdDel = document.createElement("td");
+        const tdActions = document.createElement("td");
+        tdActions.className = "table-action-cell";
 
-        // Export THIS recipe
+        // Export this recipe
         const exportBtn = document.createElement("button");
         exportBtn.textContent = "⤓";
         exportBtn.className = "export-btn";
         exportBtn.type = "button";
         exportBtn.title = "Export this recipe as PDF";
         exportBtn.addEventListener("click", () => {
-            exportSingleRecipeToPdf(r.name || "Recipe", r.text || "");
+            exportSingleRecipeToPdf(
+                r.name || "Recipe",
+                r.text || ""
+            );
         });
 
-        // Delete THIS recipe
+        // Edit this recipe
+        const editBtn = document.createElement("button");
+        editBtn.textContent = "Edit";
+        editBtn.className = "edit-btn";
+        editBtn.type = "button";
+        editBtn.title = "Edit this recipe";
+        editBtn.addEventListener("click", () => {
+            openModal(
+                {
+                    title: "Edit saved recipe",
+                    okText: "Save changes",
+                    showName: true,
+                    showText: true,
+                    nameValue: r.name || "",
+                    textValue: r.text || ""
+                },
+                ({ name, text }) => {
+                    if (!name) {
+                        alert("Please enter a recipe name.");
+                        return;
+                    }
+
+                    if (!text) {
+                        alert("Recipe text cannot be empty.");
+                        return;
+                    }
+
+                    recipeDb[idx] = {
+                        ...r,
+                        name,
+                        text,
+                        updatedAt: Date.now()
+                    };
+
+                    saveRecipeDb();
+                    renderRecipeTable();
+                    closeModal();
+                }
+            );
+        });
+
+        // Delete this recipe
         const delBtn = document.createElement("button");
         delBtn.textContent = "✕";
         delBtn.className = "delete-btn";
         delBtn.title = "Delete this recipe";
         delBtn.type = "button";
         delBtn.addEventListener("click", () => {
+            const recipeName = r.name || "this recipe";
+
+            const confirmed = confirm(
+                `Delete "${recipeName}"?\n\nThis cannot be undone.`
+            );
+
+            if (!confirmed) return;
+
             recipeDb.splice(idx, 1);
             saveRecipeDb();
             renderRecipeTable();
         });
 
-        tdDel.appendChild(exportBtn);
-        tdDel.appendChild(delBtn);
+        tdActions.append(exportBtn, editBtn, delBtn);
 
         tr.appendChild(tdName);
         tr.appendChild(tdText);
-        tr.appendChild(tdDel);
+        tr.appendChild(tdActions);
 
         recipeTableBody.appendChild(tr);
     });

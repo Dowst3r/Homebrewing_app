@@ -210,6 +210,13 @@ input {
     box-sizing: border-box;
 }
 
+.field-help {
+    margin: -0.15rem 0 0.75rem;
+    font-size: 0.8rem;
+    line-height: 1.35;
+    opacity: 0.75;
+}
+
 /* Main action button (ABV etc.) */
 #abv-btn {
     width: 100%;
@@ -462,6 +469,17 @@ body.theme-dark input::placeholder {
     transform: scale(0.97);
 }
 
+.edit-cancel-btn {
+    width: 100%;
+    justify-self: stretch !important;
+}
+
+@media (min-width: 520px) {
+    .edit-cancel-btn {
+        grid-column: 1 / -1;
+    }
+}
+
 
 /* Make empty tables visibly tall enough */
 .table-wrapper {
@@ -519,6 +537,36 @@ body.theme-dark .export-btn:hover {
     background: rgba(255, 255, 255, 0.08);
 }
 
+.table-action-cell {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.table-action-cell .export-btn {
+    margin-right: 0;
+}
+
+.edit-btn {
+    background: var(--accent);
+    color: var(--accent-text);
+    border: none;
+    border-radius: 6px;
+    padding: 0.35rem 0.55rem;
+    cursor: pointer;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.edit-btn:hover {
+    filter: brightness(0.92);
+}
+
+.edit-btn:active {
+    transform: scale(0.96);
+}
+
 .delete-btn {
     background: #ef4444;
     /* red */
@@ -528,6 +576,10 @@ body.theme-dark .export-btn:hover {
     padding: 0.25rem 0.5rem;
     cursor: pointer;
     font-size: 0.8rem;
+}
+
+.delete-btn:active {
+    transform: scale(0.96);
 }
 
 .delete-btn:hover {
@@ -550,7 +602,7 @@ body.theme-dark .delete-btn {
     border-collapse: collapse;
     margin: 0.5rem 0 1rem;
     font-size: 0.9rem;
-    min-width: 650px;
+    min-width: 720px;
     /* enough width for all 5 columns */
 }
 
@@ -579,10 +631,10 @@ body.theme-dark .delete-btn {
     word-break: break-word;
 }
 
-/* compact delete column */
+/* Saved Recipes action column */
 .db-table th:last-child,
 .db-table td:last-child {
-    width: 56px;
+    width: 150px;
 }
 
 
@@ -916,6 +968,54 @@ body.theme-dark .help-card {
     .help-toc {
         grid-template-columns: 1fr 1fr;
     }
+}
+
+/* ---------- Version-history dropdowns ---------- */
+
+.version-history {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.version-details {
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--bg) 55%, transparent);
+    box-shadow: none;
+}
+
+.version-details summary {
+    padding: 0.85rem;
+    cursor: pointer;
+    font-weight: 700;
+    color: var(--text);
+    list-style-position: inside;
+    touch-action: manipulation;
+}
+
+.version-details summary::marker {
+    color: var(--accent);
+}
+
+.version-details[open] summary {
+    color: var(--accent);
+    border-bottom: 1px solid var(--border);
+}
+
+.version-details ul {
+    margin: 0;
+    padding: 0.85rem 1rem 0.85rem 2rem;
+}
+
+.version-details li {
+    margin-bottom: 0.4rem;
+    line-height: 1.4;
+}
+
+body.theme-dark .version-details {
+    background: rgba(15, 23, 42, 0.75);
 }
 
 @media print {

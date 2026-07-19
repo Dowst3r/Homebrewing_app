@@ -7,7 +7,20 @@ export const MW_CO2 = 44.01;
 export const MW_ETH = 46.069;
 export const RHO_ETH = 789.45;
 export const RHO_WATER = 998.00; // TO BE CHANGED WHEN BACK HOME!!!!!!!!!!!!!!!!! SG of water at T room and multiply by reference density
-export const FRACTION_FERMENTABLE = 1;
+function fermentableFractionFromPercent(value) {
+  const percentage = Number(value);
+
+  // Invalid values fall back to 100% fermentable.
+  if (
+    !Number.isFinite(percentage) ||
+    percentage <= 0 ||
+    percentage > 100
+  ) {
+    return 1;
+  }
+
+  return percentage / 100;
+}
 
 // ---- ABV + OG helpers ----
 function platoFromSgLincoln(sg) {
@@ -73,6 +86,7 @@ export function calculateMeadRecipe({
   pricePerContainer,
   massPerContainerG,
   yeastNRequirement,
+  fermentablePct = 92.5,
 }) {
   const V = Number(volumeL);
   const FG = Number(0.996);
@@ -81,6 +95,7 @@ export function calculateMeadRecipe({
   const sugarConc = Number(sugarConcPct);
   const costcontainer = Number(pricePerContainer);
   const masscontainer = Number(massPerContainerG);
+  const fractionFermentable = fermentableFractionFromPercent(fermentablePct);
 
   // Starting gravity from OG/ABV relationship
   const startingGravity = ogForTargetAbv(FG, ABV);
@@ -105,7 +120,7 @@ export function calculateMeadRecipe({
         (massEthanol * (1 + (MW_CO2 / MW_ETH)) + F_SP * V) *
         1000) /
       (sugarConc / 100) /
-      FRACTION_FERMENTABLE;
+      fractionFermentable;
 
     totalHoneyKg = testMassHoney / 1000;
     containers = Math.ceil((testMassHoney / masscontainer));
@@ -172,7 +187,7 @@ export function calculateMeadRecipe({
         (massEthanolSweetening * (1 + (MW_CO2 / MW_ETH)) + F_SP * V) *
         1000) /
       (sugarConc / 100) /
-      FRACTION_FERMENTABLE;
+      fractionFermentable;
   }
 
   return {
@@ -201,11 +216,12 @@ export function calculateBacksweetening({
   targetGravity,
   volumeL,
   sugarConcPct,
+  fermentablePct = 92.5,
 }) {
   const FG = Number(finalGravityReading);
   const targetFG = Number(targetGravity);
   const V = Number(volumeL);
-  const sugarConc = Number(sugarConcPct);
+  const fractionFermentable = fermentableFractionFromPercent(fermentablePct);
 
   const imaginaryAbv = abvHmrc(targetFG, FG);
   const massEthanolSweetening =
@@ -220,7 +236,7 @@ export function calculateBacksweetening({
   if (sugarConc > 0) {
     massHoneyNeeded =
       (massSugarNeeded / (sugarConc / 100)) /
-      FRACTION_FERMENTABLE;
+      fractionFermentable;
   }
 
   return {

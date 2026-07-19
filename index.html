@@ -16,7 +16,7 @@
 <body>
   <div class="app">
     <header class="app-header">
-      <h1>Mead Helper - v1.2.1</h1>
+      <h1>Mead Helper - v1.2.2</h1>
       <button id="theme-toggle" class="icon-button" aria-label="Open settings">
         <img src="gear.png" alt="Settings">
       </button>
@@ -79,6 +79,23 @@
       <label>Honey
         <select id="mead_honey_select_recipe"></select>
       </label>
+
+      <label>Percentage fermentable (%)
+        <input
+          id="mead_fermentable_pct_recipe"
+          type="number"
+          min="0.1"
+          max="100"
+          step="0.1"
+          value="100"
+          inputmode="decimal"
+        >
+      </label>
+
+      <p class="field-help">
+        Fine-tuning value for the percentage of the honey sugar expected to ferment.
+        Use 100% for no adjustment.
+      </p>
 
       <label>Yeast
         <select id="mead_yeast_select_recipe"></select>
@@ -396,7 +413,14 @@
         step="0.1"
         placeholder="Mass per bottle (g)"
         >
-        <button id="honey-add-btn">Add</button>
+        <button id="honey-add-btn" type="button">Add</button>
+        <button
+          id="honey-cancel-edit-btn"
+          type="button"
+          class="secondary-btn edit-cancel-btn hidden"
+        >
+          Cancel edit
+        </button>
       </div>
     </section>
 
@@ -441,7 +465,14 @@
         <input id="yeast_packet_weight_input_yeastdb" placeholder="5" inputmode="decimal">
         <input id="yeast_cost_input_yeastdb" placeholder="6.00" inputmode="decimal">
 
-        <button id="yeast_add_btn_yeastdb">Add</button>
+        <button id="yeast_add_btn_yeastdb" type="button">Add</button>
+        <button
+          id="yeast-cancel-edit-btn"
+          type="button"
+          class="secondary-btn edit-cancel-btn hidden"
+        >
+          Cancel edit
+        </button>
       </div>
     </section>
 
@@ -476,7 +507,14 @@
       <input id="ph-hplus-per-mol-input" inputmode="decimal" placeholder="H+ per mol (e.g. 3)">
       <input id="ph-molar-mass-input" inputmode="decimal" placeholder="Molar mass g/mol (e.g. 192.12)">
       <input id="ph-notes-input" placeholder="Optional notes">
-      <button id="ph-add-btn">Add</button>
+      <button id="ph-add-btn" type="button">Add</button>
+      <button
+        id="ph-cancel-edit-btn"
+        type="button"
+        class="secondary-btn edit-cancel-btn hidden"
+      >
+        Cancel edit
+      </button>
     </div>
   </section>
 
@@ -542,34 +580,60 @@
       <li>PDF download on help page produces a nicer document.</li>
       <li>Adding a fruit/vegetable database that includes informtation on when and where they are in-season.</li>
       <li>Database of common and popular homebrews (mainly for meads).</li>
+      <li>Addition of profiles to allow for saving of personal information.</li>
     </ul>
-    <h3>1.2.2</h3>
+    <h3>2.0.0</h3>
     <ul>
-      <li>An edit button for the database entries.</li>
-      <li>A pop-up that ensures deleting intent in the databases.</li>
+      <li>UI colour overhaul - custom colour options available in future updates.</li>
+      <li>Smoother animations between app sections.</li>
     </ul>
     <h3>Previous Releases:</h3>
-    <h3>1.2.1:</h3>
-    <ul>
-      <li>Removing double tap to zoom.</li>
-      <li>Alteration of the mead maths to fix predicted specific gravity result in recipe page output.</li>
-      <li>Adding in alternative calculation methods for SG in recipes but also in other areas of the app.</li>
-    </ul>
-    <h3>1.2</h3>
-    <ul>
-      <li>List of features added in each version</li>
-      <li>App works offline (app must be loaded online first)</li>
-      <li>Name change from "Future Features" to "Future and Past Features"</li>
-    </ul>
-    <h3>1.1</h3>
-    <ul>
-      <li>Addition of "Future Features" (now "Future and Past Features) tab to show what features are being/going to be worked on for future releases</li>
-      <li>Change of the help screen being a PDF into a full page with the option to download the PDF version</li>
-    </ul>
-    <h3>1.0</h3>
-    <ul>
-      <li>Initial Release of the webpage/app</li>
-    </ul>
+
+    <div class="version-history">
+
+      <details class="version-details">
+        <summary>Version 1.2.2</summary>
+        <ul>
+          <li>An edit button for the database entries.</li>
+          <li>Adding an adjustable percentage fermentable for fine-tuning of brews.</li>
+          <li>A pop-up that ensures deleting intent in the databases.</li>
+          <li>Making previous versions history available under dropdowns for a cleaner look.</li>
+        </ul>
+      </details>
+
+      <details class="version-details">
+        <summary>Version 1.2.1</summary>
+        <ul>
+          <li>Removing double tap to zoom.</li>
+          <li>Alteration of the mead maths to fix the predicted specific gravity result on the recipe page.</li>
+          <li>Adding alternative calculation methods for SG in recipes and other areas of the app.</li>
+        </ul>
+      </details>
+
+      <details class="version-details">
+        <summary>Version 1.2</summary>
+        <ul>
+          <li>Added a list of features introduced in each version.</li>
+          <li>The app works offline after it has first been loaded online.</li>
+          <li>Changed “Future Features” to “Future and Past Features”.</li>
+        </ul>
+      </details>
+
+      <details class="version-details">
+        <summary>Version 1.1</summary>
+        <ul>
+          <li>Added the Future and Past Features screen.</li>
+          <li>Changed the help screen from only a PDF into a full page with a PDF download option.</li>
+        </ul>
+      </details>
+
+      <details class="version-details">
+        <summary>Version 1.0</summary>
+        <ul>
+          <li>Initial release of the webpage/app.</li>
+        </ul>
+      </details>
+    </div>
   </section>
 
 

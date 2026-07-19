@@ -1,4 +1,4 @@
-const CACHE_NAME = "mead-helper-v4"; // change to next number to indicate new version to software!!!!!
+const CACHE_NAME = "mead-helper-v5"; // change to next number to indicate new version to software!!!!!
 
 const PRECACHE_URLS = [
     "./",
