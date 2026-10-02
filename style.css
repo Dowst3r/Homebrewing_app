@@ -765,7 +765,7 @@ body.theme-dark select {
     padding: 0.85rem;
     border: 1px solid var(--border);
     border-radius: 16px;
-    background: color-mix(in srgb, var(--bg--card) 88%, transparent);
+    background: color-mix(in srgb, var(--bg-card) 88%, transparent);
 }
 
 .time-between-section+.time-between-section {
@@ -1016,6 +1016,167 @@ body.theme-dark .help-card {
 
 body.theme-dark .version-details {
     background: rgba(15, 23, 42, 0.75);
+}
+
+/* Append BEFORE the existing @media print block in style.css. */
+:root {
+    --control-bg: #ffffff;
+    --chart-accent: var(--accent);
+}
+
+body.theme-dark {
+    --bg: #000000;
+    --bg-card: #000000;
+    --text: #f9fafb;
+    --accent: #22c55e;
+    --accent-text: #022c22;
+    --border: #414141;
+    --home-btn-bg: #000000;
+    --home-btn-bg-soft: #000000;
+    --control-bg: #000000;
+}
+
+/* Match existing theme-specific specificity and replace hardcoded surfaces. */
+:is(body, body.theme-dark, body.theme-pink) .home-button,
+:is(body, body.theme-dark, body.theme-pink) .back-home,
+:is(body, body.theme-dark, body.theme-pink) .help-toc button {
+    background: var(--home-btn-bg-soft);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+:is(body, body.theme-dark, body.theme-pink) .home-button:active {
+    background: var(--home-btn-bg-soft);
+}
+
+:is(body, body.theme-dark, body.theme-pink) input,
+:is(body, body.theme-dark, body.theme-pink) select {
+    background: var(--control-bg);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+body.theme-pink {
+    --control-bg: #fff0f6;
+}
+
+input::placeholder {
+    color: var(--text);
+    opacity: 0.6;
+}
+
+body.theme-dark input::placeholder {
+    color: var(--text);
+    opacity: 0.6;
+}
+
+:is(body, body.theme-dark) .data-table th,
+:is(body, body.theme-dark) .data-table td,
+:is(body, body.theme-dark) .db-table th,
+:is(body, body.theme-dark) .db-table td {
+    border-bottom-color: var(--border);
+}
+
+:is(body, body.theme-dark) .help-card,
+:is(body, body.theme-dark) .version-details,
+.chart-card,
+.time-between-section {
+    background: var(--bg-card);
+    border-color: var(--border);
+}
+
+.modal-input,
+.modal-textarea {
+    border-color: var(--border);
+}
+
+body.theme-custom #theme-toggle img {
+    filter: var(--gear-filter, none);
+}
+
+.palette-field {
+    min-width: 0;
+    margin: 0.75rem 0;
+    padding: 0.65rem;
+    border: 1px solid var(--border);
+    border-radius: 0.6rem;
+}
+
+.palette-field legend {
+    padding: 0 0.25rem;
+}
+
+.palette-rgb {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.palette-rgb label {
+    margin: 0;
+}
+
+/* Replaces the existing entrance animation: use the navigation JS below. */
+.screen.active {
+    animation: none;
+}
+
+html {
+    --page-in-x: 12px;
+    --page-out-x: -12px;
+}
+
+html[data-nav-direction="back"] {
+    --page-in-x: -12px;
+    --page-out-x: 12px;
+}
+
+::view-transition-old(root) {
+    animation: page-out 160ms ease-in both;
+}
+
+::view-transition-new(root) {
+    animation: page-in 220ms cubic-bezier(.2, .7, .2, 1) both;
+}
+
+@keyframes page-in {
+    from {
+        opacity: 0;
+        transform: translateX(var(--page-in-x));
+    }
+
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes page-out {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    to {
+        opacity: 0;
+        transform: translateX(var(--page-out-x));
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+    *,
+    *::before,
+    *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
+    }
+
+    ::view-transition-old(root),
+    ::view-transition-new(root) {
+        animation: none;
+    }
 }
 
 @media print {

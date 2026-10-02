@@ -57,6 +57,13 @@ try {
         waitUntil: "networkidle0",
     });
 
+    await page.evaluate(async () => {
+        await document.fonts.ready;
+        const images = Array.from(document.images);
+        images.forEach(image => { image.loading = 'eager'; });
+        await Promise.all(images.map(image => image.decode()));
+    });
+
     await page.pdf({
         path: path.join(root, "app-explanation-v1.0.pdf"),
         format: "A4",

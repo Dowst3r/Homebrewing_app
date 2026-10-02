@@ -19,35 +19,24 @@ function pad2(n) {
 }
 
 export function makeLocalDate({ year, monthIndex, day, hour12, minute, second, ampm }) {
-    if (
-        !Number.isFinite(year) ||
-        !Number.isFinite(monthIndex) ||
-        !Number.isFinite(day) ||
-        !Number.isFinite(hour12) ||
-        !Number.isFinite(minute) ||
-        !Number.isFinite(second) ||
-        (ampm !== "a" && ampm !== "p")
-    ) {
+    const numbers = [year, monthIndex, day, hour12, minute, second];
+    if (!numbers.every(Number.isInteger) ||
+        year < 1 || year > 9999 || monthIndex < 0 || monthIndex > 11 ||
+        day < 1 || day > 31 || hour12 < 1 || hour12 > 12 ||
+        minute < 0 || minute > 59 || second < 0 || second > 59 ||
+        !['a', 'p'].includes(ampm)) {
         return new Date(NaN);
     }
-
-    // Convert 12h clock -> 24h clock
-    let hour24 = Math.trunc(hour12);
-    if (hour24 < 1) hour24 = 1;
-    if (hour24 > 12) hour24 = 12;
-
-    if (ampm === "p" && hour24 !== 12) hour24 += 12;
-    if (ampm === "a" && hour24 === 12) hour24 = 0;
-
-    return new Date(
-        Math.trunc(year),
-        Math.trunc(monthIndex),
-        Math.trunc(day),
-        Math.trunc(hour24),
-        Math.trunc(minute),
-        Math.trunc(second),
-        0
-    );
+    const hour24 = hour12 % 12 + (ampm === 'p' ? 12 : 0);
+    const date = new Date(0);
+    date.setFullYear(year, monthIndex, day);
+    date.setHours(hour24, minute, second, 0);
+    if (date.getFullYear() !== year || date.getMonth() !== monthIndex ||
+        date.getDate() !== day || date.getHours() !== hour24 ||
+        date.getMinutes() !== minute || date.getSeconds() !== second) {
+        return new Date(NaN);
+    }
+    return date;
 }
 
 export function formatDateTimeLabel(date) {

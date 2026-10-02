@@ -1,6 +1,6 @@
 // fermentation.js (MODULE)
 import { abvHmrc, F_SP, Y_XS, MW_CO2, MW_ETH, RHO_ETH } from "./meadMath.js";
-import { durationBetween } from "./timeDuration.js";
+import { durationBetween, makeLocalDate } from "./timeDuration.js";
 
 const RHO_ETH_kg_L = RHO_ETH / 1000;
 
@@ -70,29 +70,18 @@ function getStr(id) {
 // Reads <input type="date"> + <input type="time"> into a local Date.
 // time input uses "HH:MM" or "HH:MM:SS" (we support both).
 function readLocalDateTimeAmpm(dateId, hourId, minId, secId, ampmId) {
-    const d = getStr(dateId);
-    if (!d) return new Date(NaN);
-
-    const year = Number(d.slice(0, 4));
-    const month = Number(d.slice(5, 7)) - 1;
-    const day = Number(d.slice(8, 10));
-
-    let hour12 = Number(getStr(hourId));
-    const minute = Number(getStr(minId));
-    const second = Number(getStr(secId));
-    const ampm = getStr(ampmId); // "a" or "p"
-
-    if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) return new Date(NaN);
-    if (!Number.isFinite(hour12) || !Number.isFinite(minute) || !Number.isFinite(second)) return new Date(NaN);
-
-    if (hour12 < 1) hour12 = 1;
-    if (hour12 > 12) hour12 = 12;
-
-    let hour24 = hour12;
-    if (ampm === "p" && hour24 !== 12) hour24 += 12;
-    if (ampm === "a" && hour24 === 12) hour24 = 0;
-
-    return new Date(year, month, day, hour24, minute, second, 0);
+    const text = getStr(dateId);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return new Date(NaN);
+    const [year, month, day] = text.split('-').map(Number);
+    const hour = getStr(hourId);
+    const minuteText = getStr(minId);
+    const secondText = getStr(secId);
+    if (!hour || !minuteText || !secondText) return new Date(NaN);
+    return makeLocalDate({
+        year, monthIndex: month - 1, day,
+        hour12: Number(hour), minute: Number(minuteText),
+        second: Number(secondText), ampm: getStr(ampmId),
+    });
 }
 
 function formatTotalsLikeTimeScreen(r) {
@@ -464,15 +453,19 @@ function fitMonodParamsWithDeath(times, sgs, VmeadL, X0, S0, rand = Math.random)
 // Python SG conversion:
 // SG = 1 + (1 - YXS) * (S/V - F_SP) / ( ((1.05/0.79)*rho_eth)*(1 + MW_CO2/MW_eth) )
 function sugarToSG(S, VmeadL) {
-    const denom = ((1.05 / 0.79) * RHO_ETH_kg_L) * (1 + (MW_CO2 / MW_ETH));
-    return 1 + (1 - Y_XS) * ((S / VmeadL) - F_SP) / denom;
+    // S is now sugar concentration in g/L. VmeadL is retained for callers.
+    const denom = ((1.05 / 0.79) * RHO_ETH_kg_L) *
+        (1 + (MW_CO2 / MW_ETH));
+    return 1 + (1 - Y_XS) * ((S / 1000) - F_SP) / denom;
 }
 
 // Python S0 formula:
 function initialSugarFromSG(SG0, VmeadL) {
-    const denom = (1 - Y_XS);
-    const factor = ((1.05 / 0.79) * RHO_ETH_kg_L) * (1 + (MW_CO2 / MW_ETH));
-    return VmeadL * (((SG0 - 1) * factor / denom) + F_SP);
+    // Returns g/L. VmeadL is retained for callers.
+    const denom = 1 - Y_XS;
+    const factor = ((1.05 / 0.79) * RHO_ETH_kg_L) *
+        (1 + (MW_CO2 / MW_ETH));
+    return 1000 * (((SG0 - 1) * factor / denom) + F_SP);
 }
 
 // ---------- Replace SciPy differential evolution with a simple search ----------
@@ -616,6 +609,7 @@ function ensureCharts() {
         yeastMonod: makeLineChart("yeastMonodChart", "Yeast (g/L)"),
         abvMonod: makeLineChart("abvMonodChart", "ABV (%)"),
     };
+    applyThemeToCharts();
 }
 
 function updateChart(chart, x, y) {
@@ -687,6 +681,20 @@ if (!fermentationBtn) {
                 return;
             }
 
+            if (VmeadL <= 0 || yeastMassG <= 0 ||
+                SG0 <= 0 || SG2 <= 0 || t2 <= 0 || tEnd <= 0) {
+                throw new Error('Use positive volume, yeast mass, gravity readings and measurement/graph days.');
+            }
+            const hasThirdDay = getStr('third_day_tracking') !== '';
+            const hasThirdSg = getStr('third_sg_tracking') !== '';
+            if (hasThirdDay !== hasThirdSg) {
+                throw new Error('Fill in both third-reading boxes, or leave both empty.');
+            }
+            if (hasThirdDay && (!Number.isFinite(t3) || !Number.isFinite(SG3) ||
+                t3 <= 0 || t3 === t2 || SG3 <= 0)) {
+                throw new Error('The third reading needs a positive gravity and a different positive measurement day.');
+            }
+
             // Build measured arrays
             const times = [0, t2];
             const sgs = [SG0, SG2];
@@ -700,12 +708,9 @@ if (!fermentationBtn) {
             const sgMeas = paired.map(p => p[1]);
 
             // ---- Option A: seeded RNG so repeated runs are identical ----
-            const seedStr = [
-                SG0, SG2, SG3, VmeadL, yeastMassG, t2, t3, tEnd,
-                ...tMeas, ...sgMeas
-            ].map(v => Number.isFinite(v) ? Number(v).toFixed(6) : "NaN").join("|");
-
-            const seed32 = xmur3(seedStr)();
+            const seed32 = makeFitSeed({
+                SG0, sgMeas, tMeas, yeastG: yeastMassG, VmeadL,
+            });
             const rand = mulberry32(seed32);
 
             const SG_MIN = 0.996;
@@ -722,7 +727,8 @@ if (!fermentationBtn) {
             const query_forSim = readLocalDateTimeAmpm("ft_query_date", "ft_query_hour", "ft_query_min", "ft_query_sec", "ft_query_ampm");
             const dur_forSim = durationBetween(day0_forSim, query_forSim);
 
-            if (!dur_forSim?.error && Number.isFinite(dur_forSim?.totalDays)) {
+            if (!dur_forSim?.error && !dur_forSim?.swapped &&
+                Number.isFinite(dur_forSim?.totalDays)) {
                 tQueryDaysForSim = dur_forSim.totalDays;
             }
 
@@ -790,8 +796,8 @@ if (!fermentationBtn) {
 
                 if (dur?.error) {
                     outEl.textContent = `Date/time query error: ${dur.error}`;
-                } else if (!Number.isFinite(dur.totalDays)) {
-                    outEl.textContent = "Enter Day 0 date+time and Query date+time to compute SG/ABV at a date.";
+                } else if (dur.swapped) {
+                    outEl.textContent = 'Choose a query date on or after Day 0.';
                 } else {
                     const tQueryDays = dur.totalDays; // THIS is the time axis used by your models
 

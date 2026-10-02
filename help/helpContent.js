@@ -3,26 +3,36 @@
 
 export const helpSections = [
     {
+        id: 'settings-backups',
+        title: 'Colours, backups and updates',
+        bodyHtml: `
+        <p>Choose Light, OLED black, Pretty pink or either of your two personal palettes in Settings.</p>
+        <p>Edit a palette using RGB values from 0 to 255, then choose Save and use palette.</p>
+        <p>Download a JSON backup to keep your saved databases, recipes and palettes outside the app. Restore replaces saved data with the selected backup.</p>
+        <p>Normal updates preserve saved data at the same address. Backups are needed when moving devices or recovering cleared storage. Unsaved forms are not included.</p>
+        <p>While online, check for updates. Save your work before applying a downloaded update.</p>
+    `,
+    },
+    {
         id: "mead-recipe",
         title: "Mead Recipe",
         image: "help/images/mead-recipe.png",
         bodyHtml: `
-            <p>This section is used to calculate the recipe details for your batch of homebrew.</p>
-            <ul>
-                <li><strong>Batch size (L)</strong>: The final volume of your brew in litres.</li>
-                <li><strong>Target final gravity (FG)</strong>: The sweetness/body you want after fermentation that comes from back-sweetening.</li>
-                <li><strong>Target ABV (%)</strong>: The alcohol percentage or ABV you desire.</li>
-                <li><strong>Honey</strong>: Selected from your Honey Database.</li>
-                <li><strong>Yeast</strong>: Selected from your Yeast Database.</li>
-                <li><strong>Using Fruit?</strong>: Currently has no function. Future functionality coming in later versions.</li>
-                <li><strong>Fruit (optional)</strong>: Currently has no function. Future functionality coming in later versions.</li>
-            </ul>
-            <div class="help-tip"><strong>Note:</strong> Ensure that the Honey Database is updated first if you want the recipe cost and honey mass to match what you actually bought and use.</div>
-        `,
-        image: "/help/images/mead-example-output.png",
-        bodyHtml: `
-        <p>The result box re-prints the desired values, and gives the estimated starting gravity and Brix, the amount of sugar, honey, and water required. But also the yeast nutrients and honey required for backsweetening.</p>
-        `,
+        <p>Use this section to calculate recipe details for your batch of homebrew.</p>
+        <ul>
+            <li><strong>Batch size (L)</strong>: The batch volume used by the calculation. Honey added later can increase the finished volume.</li>
+            <li><strong>Target final gravity (FG)</strong>: The desired gravity after back-sweetening. The recipe assumes fermentation reaches 0.996 first.</li>
+            <li><strong>Target ABV (%)</strong>: The estimated alcohol percentage before back-sweetening.</li>
+            <li><strong>Honey</strong>: Selected from your Honey Database. Enter its labelled sugar concentration there.</li>
+            <li><strong>Biomass yield Yₓₛ (g/g)</strong>: A model assumption for grams of dry yeast biomass per gram of sugar consumed. Default: 0.10 g/g.</li>
+            <li><strong>Yeast</strong>: Selected from your Yeast Database.</li>
+            <li><strong>Using Fruit?</strong> and <strong>Fruit</strong>: Recorded as notes; fruit sugar is not included in the calculation.</li>
+        </ul>
+        <div class="help-tip"><strong>Note:</strong> Update the Honey Database so honey mass and cost match what you use.</div>
+        <p>The result gives starting gravity and Brix estimates, sugar and honey amounts, water, nutrients and an approximate back-sweetening amount.</p>
+        <p>Back-sweetening uses a gravity-based estimate without a yeast-growth allowance. Add honey gradually and re-check gravity. Adding honey can dilute the ABV.</p>
+        <img class="help-image" src="help/images/mead-example-output.png" alt="Example recipe output" loading="lazy">
+    `,
     },
     {
         id: "abv-calculator",

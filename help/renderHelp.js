@@ -24,7 +24,11 @@ export function renderHelp({ contentEl, tocEl } = {}) {
         tocEl.querySelectorAll("[data-help-target]").forEach((button) => {
             button.addEventListener("click", () => {
                 const target = document.getElementById(button.dataset.helpTarget);
-                target?.scrollIntoView({ behavior: "smooth", block: "start" });
+                target?.scrollIntoView({
+                    behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                        ? 'auto' : 'smooth',
+                    block: 'start',
+                });
             });
         });
     }

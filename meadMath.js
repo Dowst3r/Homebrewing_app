@@ -86,7 +86,7 @@ export function calculateMeadRecipe({
   pricePerContainer,
   massPerContainerG,
   yeastNRequirement,
-  fermentablePct = 92.5,
+  yXs = Y_XS,
 }) {
   const V = Number(volumeL);
   const FG = Number(0.996);
@@ -95,7 +95,24 @@ export function calculateMeadRecipe({
   const sugarConc = Number(sugarConcPct);
   const costcontainer = Number(pricePerContainer);
   const masscontainer = Number(massPerContainerG);
-  const fractionFermentable = fermentableFractionFromPercent(fermentablePct);
+  const yieldXs = Number(yXs);
+
+  if (!Number.isFinite(yieldXs) || yieldXs <= 0 || yieldXs >= 1) {
+    throw new RangeError("Y_xs must be greater than 0 and less than 1 g/g.");
+  }
+  if (!Number.isFinite(V) || V <= 0) {
+    throw new RangeError("Batch volume must be greater than 0 litres.");
+  }
+  if (!Number.isFinite(ABV) || ABV <= 0 || ABV >= 100) {
+    throw new RangeError("Target ABV must be greater than 0 and less than 100%.");
+  }
+  if (!Number.isFinite(sugarConc) || sugarConc <= 0 || sugarConc > 100) {
+    throw new RangeError("Honey sugar concentration must be greater than 0 and no more than 100%.");
+  }
+  if (!Number.isFinite(masscontainer) || masscontainer <= 0 ||
+    !Number.isFinite(costcontainer) || costcontainer < 0) {
+    throw new RangeError("Honey container mass must be positive and its price must be zero or greater.");
+  }
 
   // Starting gravity from OG/ABV relationship
   const startingGravity = ogForTargetAbv(FG, ABV);
@@ -105,7 +122,7 @@ export function calculateMeadRecipe({
 
   // Total pure sugar needed to hit that ethanol
   const totalSugarNeeded =
-    (1 / (1 - Y_XS)) *
+    (1 / (1 - yieldXs)) *
     (massEthanol * (1 + (MW_CO2 / MW_ETH)) + F_SP * V) *
     1000;
 
@@ -115,12 +132,7 @@ export function calculateMeadRecipe({
   let cost = 0;
 
   if (sugarConc > 0) {
-    testMassHoney =
-      ((1 / (1 - Y_XS)) *
-        (massEthanol * (1 + (MW_CO2 / MW_ETH)) + F_SP * V) *
-        1000) /
-      (sugarConc / 100) /
-      fractionFermentable;
+    testMassHoney = totalSugarNeeded / (sugarConc / 100);
 
     totalHoneyKg = testMassHoney / 1000;
     containers = Math.ceil((testMassHoney / masscontainer));
@@ -128,6 +140,9 @@ export function calculateMeadRecipe({
   }
 
   const brix = brixFromSg(startingGravity);
+  if (!Number.isFinite(brix) || brix < 0) {
+    throw new RangeError('The target ABV is too low for this recipe model.');
+  }
 
   // Fermaid-O (only if ABV <= 14%)
   let fermaidOGramsTotal = null;
@@ -170,24 +185,25 @@ export function calculateMeadRecipe({
     thirdsugarbreak = startingGravity - ((startingGravity - 1) / 3);
   }
 
-  // Back-sweetening part (using FG vs 1.000 like in your Python)
-  const imaginaryAbvForDesiredFinalSweetness = abvHmrc(targetSweetFG, FG);
-  const massEthanolSweetening =
-    (V / 1000) * RHO_ETH * imaginaryAbvForDesiredFinalSweetness / 100;
+  // Back-sweetening has no yeast growth or fermentation byproduct allowance.
+  // This remains an approximate gravity-to-sugar conversion.
+  const sweetening = calculateBacksweetening({
+    finalGravityReading: FG,
+    targetGravity: targetSweetFG,
+    volumeL: V,
+    sugarConcPct: sugarConc,
+  });
+  const imaginaryAbvForDesiredFinalSweetness = sweetening.imaginaryAbv;
+  const massPureSugarNeededForSweetening = sweetening.massSugarNeeded;
+  const massHoneyNeededForSweetening = sweetening.massHoneyNeeded;
 
-  const massPureSugarNeededForSweetening =
-    (1 / (1 - Y_XS)) *
-    (massEthanolSweetening * (1 + (MW_CO2 / MW_ETH)) + F_SP * V) *
-    1000;
+  const waterVolumeL =
+    startingGravity * V - totalHoneyKg / (RHO_WATER / 1000);
 
-  let massHoneyNeededForSweetening = 0;
-  if (sugarConc > 0) {
-    massHoneyNeededForSweetening =
-      ((1 / (1 - Y_XS)) *
-        (massEthanolSweetening * (1 + (MW_CO2 / MW_ETH)) + F_SP * V) *
-        1000) /
-      (sugarConc / 100) /
-      fractionFermentable;
+  if (!Number.isFinite(waterVolumeL) || waterVolumeL < 0) {
+    throw new RangeError(
+      'These settings produce a negative water estimate. Reduce Y_xs or target ABV, or choose a higher sugar concentration.'
+    );
   }
 
   return {
@@ -198,7 +214,7 @@ export function calculateMeadRecipe({
     honeyMassKg: totalHoneyKg,
     containers,
     cost,
-    waterVolumeL: (startingGravity * V - (totalHoneyKg / (RHO_WATER / 1000))),
+    waterVolumeL,
     fermaidOGramsTotal,
     fermaidOGramsPerDay,
     fermaidKGramsTotal,
@@ -216,33 +232,34 @@ export function calculateBacksweetening({
   targetGravity,
   volumeL,
   sugarConcPct,
-  fermentablePct = 92.5,
 }) {
   const FG = Number(finalGravityReading);
   const targetFG = Number(targetGravity);
   const V = Number(volumeL);
-  const fractionFermentable = fermentableFractionFromPercent(fermentablePct);
+  const sugarConc = Number(sugarConcPct);
 
+  if (![FG, targetFG, V, sugarConc].every(Number.isFinite) ||
+    FG <= 0 || targetFG < FG || V <= 0 || sugarConc <= 0 || sugarConc > 100) {
+    throw new RangeError(
+      "Use a positive volume and sugar percentage (up to 100), and a target gravity at least equal to the current gravity."
+    );
+  }
+
+  // Approximate gravity-to-sugar conversion using the existing ABV equation.
+  // The hypothetical ethanol amount below is a conversion aid, not alcohol
+  // produced by back-sweetening. Added honey must remain unfermented.
+  // This estimate does not model volume increase or alcohol dilution.
   const imaginaryAbv = abvHmrc(targetFG, FG);
   const massEthanolSweetening =
     (V / 1000) * RHO_ETH * imaginaryAbv / 100;
-
   const massSugarNeeded =
-    (1 / (1 - Y_XS)) *
-    (massEthanolSweetening * (1 + (MW_CO2 / MW_ETH)) + F_SP * V) *
-    1000;
-
-  let massHoneyNeeded = 0;
-  if (sugarConc > 0) {
-    massHoneyNeeded =
-      (massSugarNeeded / (sugarConc / 100)) /
-      fractionFermentable;
+    massEthanolSweetening * (1 + (MW_CO2 / MW_ETH)) * 1000;
+  if (!Number.isFinite(massSugarNeeded) || massSugarNeeded < 0) {
+    throw new RangeError('These gravity readings are outside the supported sweetening estimate.');
   }
+  const massHoneyNeeded = massSugarNeeded / (sugarConc / 100);
 
-  return {
-    massSugarNeeded,
-    massHoneyNeeded,
-  };
+  return { imaginaryAbv, massSugarNeeded, massHoneyNeeded };
 }
 
 // ---- pH adjustment (CaCO3) ----

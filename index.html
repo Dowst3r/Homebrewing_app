@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Mead Maker</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="./mead_calculation_icon.ico" sizes="any">
   <link rel="shortcut icon" href="./mead_calculation_icon.ico">
@@ -16,7 +16,7 @@
 <body>
   <div class="app">
     <header class="app-header">
-      <h1>Mead Helper - v1.2.2</h1>
+      <h1>Mead Helper - v2.0.0</h1>
       <button id="theme-toggle" class="icon-button" aria-label="Open settings">
         <img src="gear.png" alt="Settings">
       </button>
@@ -43,17 +43,44 @@
         <button class="back-home">← Home</button>
         <h2>Settings</h2>
 
-        <div class="settings-row">
-            <span>Dark mode</span>
-            <label class="switch">
-                <input type="checkbox" id="dark-mode-toggle">
-                <span class="slider"></span>
+        <!-- Replace the existing settings-row (the two theme switches). -->
+        <label>Colour theme
+            <select id="theme-select">
+                <option value="light">Light</option>
+                <option value="dark">OLED black</option>
+                <option value="pink">Pretty pink</option>
+                <option value="custom-1">Custom 1</option>
+                <option value="custom-2">Custom 2</option>
+            </select>
+        </label>
+        <h3>Personal palettes</h3>
+        <p>Save two palettes. Each colour uses red, green and blue values from 0 to 255.</p>
+        <label>Palette to edit
+            <select id="palette-slot">
+              <option value="0">Custom 1</option>
+              <option value="1">Custom 2</option>
+            </select>
+        </label>
+        <form id="palette-form">
+            <label>Palette name
+                <input id="palette-name" type="text" maxlength="40" required>
             </label>
-            <span>Pretty pink</span>
-            <label class="switch">
-              <input type="checkbox" id="pink-mode-toggle">
-              <span class="slider"></span>
-            </label>
+            <div id="palette-fields"></div>
+            <button class="Calculate_buttons" type="submit">Save and use palette</button>
+        </form>
+        <p id="palette-status" role="status" aria-live="polite"></p>
+        <p>Use the JSON backup below to keep a copy of both palettes with your saved data.</p>
+        <div class="settings-backups">
+          <h3>Backup and restore</h3>
+          <p>Save your databases, recipes and both custom colour palettes to a JSON file.</p>
+          <button id="backup-export-btn" type="button" class="Calculate_buttons secondary-btn">Download JSON backup</button>
+          <label>Restore JSON backup
+            <input id="backup-import-file" type="file" accept=".json,application/json">
+          </label>
+          <p id="backup-status" role="status" aria-live="polite"></p>
+          <button id="app-update-btn" type="button" class="Calculate_buttons secondary-btn" hidden>Apply downloaded update</button>
+          <button id="app-check-update-btn" type="button" class="Calculate_buttons secondary-btn">Check for updates</button>
+          <p id="app-update-status" role="status" aria-live="polite"></p>
         </div>
     </section>
 
@@ -80,21 +107,21 @@
         <select id="mead_honey_select_recipe"></select>
       </label>
 
-      <label>Percentage fermentable (%)
+      <label>Biomass yield Yₓₛ (g/g)
         <input
-          id="mead_fermentable_pct_recipe"
-          type="number"
-          min="0.1"
-          max="100"
-          step="0.1"
-          value="100"
-          inputmode="decimal"
+        id="mead_y_xs_recipe"
+        type="number"
+        min="0.001"
+        max="0.999"
+        step="0.001"
+        value="0.100"
+        inputmode="decimal"
         >
       </label>
 
       <p class="field-help">
-        Fine-tuning value for the percentage of the honey sugar expected to ferment.
-        Use 100% for no adjustment.
+        Model assumption: grams of dry yeast biomass per gram of sugar consumed.
+        Default: 0.10 g/g.
       </p>
 
       <label>Yeast
@@ -576,20 +603,32 @@
     <button class="back-home">← Home</button>
     <h3>Future Features:</h3>
     <ul>
-      <li>How backsweetening changes the ABV of the mead.</li>
       <li>PDF download on help page produces a nicer document.</li>
       <li>Adding a fruit/vegetable database that includes informtation on when and where they are in-season.</li>
-      <li>Database of common and popular homebrews (mainly for meads).</li>
-      <li>Addition of profiles to allow for saving of personal information.</li>
     </ul>
-    <h3>2.0.0</h3>
+    <h3>2.0.1</h3>
     <ul>
-      <li>UI colour overhaul - custom colour options available in future updates.</li>
-      <li>Smoother animations between app sections.</li>
+      <li>How backsweetening changes the ABV of the mead.</li>
+      <li>Database of common and popular homebrews (mainly for meads).</li>
     </ul>
     <h3>Previous Releases:</h3>
 
     <div class="version-history">
+
+      <details class="version-details" open>
+        <summary>Version 2.0.0</summary>
+        <ul>
+          <li>Replaced the recipe's fermentable percentage with an adjustable biomass yield Yₓₛ.</li>
+          <li>Added smoother page transitions and support for reduced motion.</li>
+          <li>Added two named personal colour palettes using RGB values.</li>
+          <li>Added backup and restore for databases, saved recipes and colour settings.</li>
+          <li>Preserved saved data during normal app updates and retained deliberately empty databases.</li>
+          <li>Changed dark mode backgrounds and panels to black.</li>
+          <li>Added a downloaded-update control for reliable offline releases.</li>
+          <li>Corrected the back-sweetening growth allowance and restored missing recipe help.</li>
+          <li>Removed future profile making with saved data between releases.</li>
+        </ul>
+      </details>
 
       <details class="version-details">
         <summary>Version 1.2.2</summary>
@@ -667,21 +706,66 @@
   <script src="./vendor/chart.umd.js"></script>
   <script type="module" src="./fermentation.js"></script>
   <script type="module" src="./app.js"></script>
+  <script type="module" src="./backup.js"></script>
 
   <script>
   if ("serviceWorker" in navigator) {
+    let registration;
     let refreshing = false;
-
+    let hadController = Boolean(navigator.serviceWorker.controller);
+    const updateButton = document.getElementById("app-update-btn");
+    const checkButton = document.getElementById("app-check-update-btn");
+    const status = document.getElementById("app-update-status");
+    const report = message => { status.textContent = message; };
+    const offerUpdate = () => {
+      if (registration?.waiting) {
+        updateButton.hidden = false;
+        report("Update downloaded. Save your work, then apply the update.");
+      }
+    };
+    const watchWorker = worker => {
+      if (!worker) return;
+      report("Downloading app files…");
+      worker.addEventListener("statechange", () => {
+        if (worker.state === "installed") {
+          if (navigator.serviceWorker.controller) offerUpdate();
+          else report("App files downloaded for offline use.");
+        } else if (worker.state === "redundant") report("Download failed. Check that every offline asset is deployed.");
+      });
+    };
     navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController) { hadController = true; return; }
       if (refreshing) return;
       refreshing = true;
       window.location.reload();
     });
-
-    window.addEventListener("load", () => {
-      navigator.serviceWorker.register("./service-worker.js").then(registration => {
-        registration.update();
-      });
+    updateButton.addEventListener("click", () => {
+      if (registration?.waiting && confirm("Apply the update and reload? Save any open recipes or database edits first. Other open copies of this app will also reload.")) {
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+      }
+    });
+    const check = async () => {
+      if (!registration) return;
+      if (!navigator.onLine) { report("Connect to the internet to check for updates."); return; }
+      try {
+        report("Checking for updates…");
+        await registration.update();
+        if (registration.waiting) offerUpdate();
+        else if (registration.installing) report("Downloading app files…");
+        else report("No new version found.");
+      } catch { report("Update check failed. Your existing offline copy is still available."); }
+    };
+    checkButton.addEventListener("click", check);
+    window.addEventListener("online", check);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+    window.addEventListener("load", async () => {
+      try {
+        registration = await navigator.serviceWorker.register("./service-worker.js", { updateViaCache: "none" });
+        offerUpdate();
+        watchWorker(registration.installing);
+        registration.addEventListener("updatefound", () => watchWorker(registration.installing));
+        await check();
+      } catch { report("Offline setup failed. Serve this app over HTTPS and check all deployed files."); }
     });
   }
   </script>

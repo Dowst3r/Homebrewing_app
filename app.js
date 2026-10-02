@@ -1,5 +1,6 @@
 import { abvHmrc, calculateMeadRecipe, calculatePhAdjustment } from './meadMath.js';
 import { renderHelp } from './help/renderHelp.js';
+import { initThemeSettings } from './theme.js';
 import {
     durationBetween,
     formatDateTimeLabel,
@@ -8,55 +9,8 @@ import {
     monthLabelToIndex,
 } from './timeDuration.js';
 
-// ----- THEME HANDLING -----
-
-const body = document.body;
 const settingsButton = document.getElementById('theme-toggle');
-const darkModeCheckbox = document.getElementById('dark-mode-toggle');
-const pinkModeCheckbox = document.getElementById('pink-mode-toggle');
-
-function setTheme(theme) {
-    body.classList.remove('theme-dark', 'theme-pink');
-
-    if (theme === 'dark') body.classList.add('theme-dark');
-    else if (theme === 'pink') body.classList.add('theme-pink');
-
-    localStorage.setItem('theme', theme);
-
-    if (darkModeCheckbox) darkModeCheckbox.checked = theme === 'dark';
-    if (pinkModeCheckbox) pinkModeCheckbox.checked = theme === 'pink';
-    window.dispatchEvent(new CustomEvent("themechange", { detail: { theme } }));
-}
-
-
-
-
-
-darkModeCheckbox.addEventListener('change', () => {
-    if (darkModeCheckbox.checked) {
-        if (pinkModeCheckbox) pinkModeCheckbox.checked = false;
-        setTheme('dark');
-    } else {
-        setTheme('light');
-    }
-});
-
-pinkModeCheckbox.addEventListener('change', () => {
-    if (pinkModeCheckbox.checked) {
-        if (darkModeCheckbox) darkModeCheckbox.checked = false;
-        setTheme('pink');
-    } else {
-        setTheme('light');
-    }
-});
-
-// Load saved theme (or default to light)
-const savedTheme = localStorage.getItem('theme');
-if (savedTheme === 'dark' || savedTheme === 'pink') {
-    setTheme(savedTheme);
-} else {
-    setTheme('light');
-}
+initThemeSettings();
 
 // =====================
 // APP HELP SCREEN (HTML)
@@ -87,8 +41,6 @@ function filterHelpCards(query) {
         card.classList.toggle("hidden", !matches);
     });
 }
-
-// ----- SCREEN NAVIGATION -----
 
 // ----- SCREEN NAVIGATION -----
 
@@ -128,19 +80,61 @@ function runScreenSetup(id) {
     }
 }
 
-function showScreen(id) {
-    const targetScreen = document.getElementById(id);
-    if (!targetScreen) return;
+// In app.js: add these variables immediately before showScreen,
+// and replace only the existing showScreen function with this implementation.
+let navigationTicket = 0;
+let activePageTransition = null;
+const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    screens.forEach(screen => {
-        screen.classList.toggle("active", screen.id === id);
-    });
+function showScreen(id, direction = 'forward') {
+    const targetScreen = document.getElementById(id);
+    if (!targetScreen || (targetScreen.classList.contains('active') && id === currentScreenId)) return;
 
     currentScreenId = id;
-    runScreenSetup(id);
+    const ticket = ++navigationTicket;
+    activePageTransition?.skipTransition();
 
-    // Make each new screen feel like a fresh app page
-    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    const updateScreen = () => {
+        if (ticket !== navigationTicket) return;
+        document.documentElement.dataset.navDirection = direction;
+        screens.forEach(screen => {
+            screen.getAnimations().forEach(animation => animation.cancel());
+            screen.classList.toggle('active', screen.id === id);
+        });
+        runScreenSetup(id);
+        window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+        const heading = targetScreen.querySelector('h2');
+        if (heading) {
+            heading.tabIndex = -1;
+            heading.focus({ preventScroll: true });
+        }
+    };
+
+    const fallback = () => {
+        updateScreen();
+        if (!reducedMotion.matches && targetScreen.animate) {
+            const x = direction === 'back' ? -12 : 12;
+            targetScreen.animate([
+                { opacity: 0, transform: `translateX(${x}px)` },
+                { opacity: 1, transform: 'translateX(0)' },
+            ], { duration: 220, easing: 'cubic-bezier(.2,.7,.2,1)' });
+        }
+    };
+
+    if (reducedMotion.matches || !document.startViewTransition) {
+        fallback();
+        return;
+    }
+
+    try {
+        const transition = document.startViewTransition(updateScreen);
+        activePageTransition = transition;
+        transition.finished.catch(() => { }).finally(() => {
+            if (activePageTransition === transition) activePageTransition = null;
+        });
+    } catch {
+        fallback();
+    }
 }
 
 function navigateToScreen(id) {
@@ -152,14 +146,13 @@ function navigateToScreen(id) {
 
 function navigateHome() {
     screenHistory = [];
-    showScreen("screen-home");
+    showScreen('screen-home', 'back');
 }
 
 function goBackScreen() {
-    if (currentScreenId === "screen-home") return;
-
-    const previousScreen = screenHistory.pop() || "screen-home";
-    showScreen(previousScreen);
+    if (currentScreenId === 'screen-home') return;
+    const previousScreen = screenHistory.pop() || 'screen-home';
+    showScreen(previousScreen, 'back');
 }
 
 // Home grid buttons
@@ -286,8 +279,7 @@ function loadHoneyDb() {
 
         const parsed = JSON.parse(saved);
 
-        // If the saved value isn't a list, or it's an empty list, fall back to defaults
-        if (!Array.isArray(parsed) || parsed.length === 0) return defaultHoneyDb.slice();
+        if (!Array.isArray(parsed)) return defaultHoneyDb.slice();
 
         // Basic validation/cleanup so the table can't silently break
         const cleaned = parsed
@@ -304,7 +296,7 @@ function loadHoneyDb() {
                 Number.isFinite(x.mass)
             );
 
-        return cleaned.length ? cleaned : defaultHoneyDb.slice();
+        return cleaned;
     } catch {
         return defaultHoneyDb.slice();
     }
@@ -343,7 +335,9 @@ function beginHoneyEdit(index) {
 
 
 function saveHoneyDb() {
-    localStorage.setItem('honeyDb', JSON.stringify(honeyDb));
+    const saved = storeDatabase('honeyDb', honeyDb);
+    if (!saved) honeyDb = loadHoneyDb();
+    return saved;
 }
 
 function renderHoneyTable() {
@@ -390,7 +384,7 @@ function renderHoneyTable() {
             if (!confirmed) return;
 
             honeyDb.splice(index, 1);
-            saveHoneyDb();
+            if (!saveHoneyDb()) return;
             resetHoneyEditor();
             renderHoneyTable();
             fillHoneyDropdown();
@@ -426,6 +420,13 @@ if (honeyAddBtn) {
             return;
         }
 
+        if (!Number.isFinite(sugar) || sugar < 0 || sugar > 100 ||
+            !Number.isFinite(price) || price < 0 ||
+            !Number.isFinite(mass) || mass <= 0) {
+            alert('Use sugar from 0 to 100%, a price of zero or greater, and a positive container mass.');
+            return;
+        }
+
         const entry = { name, sugar, price, mass };
 
         if (honeyEditIndex === null) {
@@ -434,7 +435,7 @@ if (honeyAddBtn) {
             honeyDb[honeyEditIndex] = entry;
         }
 
-        saveHoneyDb();
+        if (!saveHoneyDb()) return;
         renderHoneyTable();
         fillHoneyDropdown();
         resetHoneyEditor();
@@ -448,7 +449,7 @@ honeyCancelEditBtn?.addEventListener('click', resetHoneyEditor);
 const meadVolInput = document.getElementById('mead_volume_l_recipe');
 const meadFgInput = document.getElementById('mead_final_gravity_recipe');
 const meadAbvInput = document.getElementById('mead_target_abv_recipe');
-const meadFermentableInput = document.getElementById('mead_fermentable_pct_recipe');
+const meadYieldInput = document.getElementById('mead_y_xs_recipe');
 const meadHoneySelect = document.getElementById('mead_honey_select_recipe');
 const meadYeastSelect = document.getElementById('mead_yeast_select_recipe');
 const meadUseFruit = document.getElementById('mead_use_fruit_recipe');
@@ -499,20 +500,15 @@ if (meadBtn) {
         const volumeL = parseFloat(meadVolInput?.value);
         const finalGravity = parseFloat(meadFgInput?.value);
         const targetAbv = parseFloat(meadAbvInput?.value);
-        const fermentablePct = parseFloat(meadFermentableInput?.value);
+        const yXs = Number(meadYieldInput?.value);
 
         if (!Number.isFinite(volumeL) || !Number.isFinite(finalGravity) || !Number.isFinite(targetAbv)) {
             meadOut.textContent = 'Please enter valid numbers for volume, FG and ABV.';
             return;
         }
 
-        if (
-            !Number.isFinite(fermentablePct) ||
-            fermentablePct <= 0 ||
-            fermentablePct > 100
-        ) {
-            meadOut.textContent =
-                'Percentage fermentable must be greater than 0 and no more than 100.';
+        if (!Number.isFinite(yXs) || yXs <= 0 || yXs >= 1) {
+            meadOut.textContent = 'Y_xs must be greater than 0 and less than 1 g/g.';
             return;
         }
 
@@ -543,16 +539,22 @@ if (meadBtn) {
         const yeastNRequirement = yeast.nReq;
 
 
-        const r = calculateMeadRecipe({
-            volumeL,
-            finalGravity,
-            targetAbv,
-            sugarConcPct,
-            pricePerContainer,
-            massPerContainerG,
-            yeastNRequirement,
-            fermentablePct,
-        });
+        let r;
+        try {
+            r = calculateMeadRecipe({
+                volumeL,
+                finalGravity,
+                targetAbv,
+                sugarConcPct,
+                pricePerContainer,
+                massPerContainerG,
+                yeastNRequirement,
+                yXs,
+            });
+        } catch (error) {
+            meadOut.textContent = error.message;
+            return;
+        }
 
         const fruitUsed = !!meadUseFruit?.checked;
         const fruitType = (meadFruitType?.value || '').trim();
@@ -561,7 +563,7 @@ if (meadBtn) {
         text += `Honey type: ${honey.name}\n`;
         text += `Yeast: ${yeast.name} (N Requirement: ${yeastNRequirement})\n`;
         text += `Fruit used: ${fruitUsed ? `Yes${fruitType ? ' - ' + fruitType : ''}` : 'No'}\n\n`;
-        text += `Percentage fermentable: ${fmt(fermentablePct, 1)}%\n\n`;
+        text += `Biomass yield Y_xs: ${fmt(yXs, 3)} g/g\n\n`;
 
         text += `Desired ABV: ${fmt(targetAbv, 1)}%\n`;
         text += `Final gravity target: ${fmt(finalGravity, 3)}\n`;
@@ -602,10 +604,12 @@ if (meadBtn) {
         }
 
 
-        text += `\n--- Honey for Back-Sweetening ---\n`;
+        text += `\n--- Approximate Honey for Back-Sweetening ---\n`;
         text += `Back-Sweetening Target FG: ${fmt(finalGravity, 3)}\n`;
         text += `Total pure sugar needed: ${fmt(r.massPureSugarNeededForSweetening, 2)} g\n`;
         text += `Honey Mass Required: ${fmt(r.massHoneyNeededForSweetening, 2)} g\n`;
+        text += 'This is an initial gravity-based estimate. Add gradually and re-check gravity.\n';
+        text += 'Adding honey increases volume and can reduce the finished ABV.\n';
 
         meadOut.textContent = text;
     });
@@ -641,7 +645,7 @@ function loadYeastDb() {
         if (!saved) return defaultYeastDb.slice();
 
         const parsed = JSON.parse(saved);
-        if (!Array.isArray(parsed) || parsed.length === 0) return defaultYeastDb.slice();
+        if (!Array.isArray(parsed)) return defaultYeastDb.slice();
 
         const cleaned = parsed
             .map((x) => ({
@@ -657,7 +661,7 @@ function loadYeastDb() {
                 Number.isFinite(x.costPerPacket)
             );
 
-        return cleaned.length ? cleaned : defaultYeastDb.slice();
+        return cleaned;
     } catch {
         return defaultYeastDb.slice();
     }
@@ -695,7 +699,9 @@ function beginYeastEdit(index) {
 }
 
 function saveYeastDb() {
-    localStorage.setItem("yeastDb", JSON.stringify(yeastDb));
+    const saved = storeDatabase('yeastDb', yeastDb);
+    if (!saved) yeastDb = loadYeastDb();
+    return saved;
 }
 
 // Render
@@ -745,7 +751,7 @@ function renderYeastTable() {
             if (!confirmed) return;
 
             yeastDb.splice(idx, 1);
-            saveYeastDb();
+            if (!saveYeastDb()) return;
             resetYeastEditor();
             renderYeastTable();
             fillYeastDropdown();
@@ -804,7 +810,7 @@ if (yeastAddBtn) {
             yeastDb[yeastEditIndex] = entry;
         }
 
-        saveYeastDb();
+        if (!saveYeastDb()) return;
         renderYeastTable();
         fillYeastDropdown();
         resetYeastEditor();
@@ -871,22 +877,24 @@ function beginPhEdit(index) {
 }
 
 function savePhDb() {
-    localStorage.setItem("phAdjusterDb", JSON.stringify(phDb));
+    const saved = storeDatabase('phAdjusterDb', phDb);
+    if (!saved) loadPhDb();
+    return saved;
 }
 
 function loadPhDb() {
     try {
-        const raw = localStorage.getItem("phAdjusterDb");
-        if (!raw) {
+        const raw = localStorage.getItem('phAdjusterDb');
+        if (raw === null) {
             phDb = defaultPhDb.slice();
-            savePhDb();
             return;
         }
         const parsed = JSON.parse(raw);
-        phDb = Array.isArray(parsed) ? parsed : defaultPhDb.slice();
+        if (!Array.isArray(parsed)) throw new Error('Expected a database list.');
+        phDb = parsed;
     } catch {
         phDb = defaultPhDb.slice();
-        savePhDb();
+        alert('The saved pH database could not be read. Defaults are shown; the stored data has not been overwritten. Recover it before saving more pH changes.');
     }
 }
 
@@ -937,7 +945,7 @@ function renderPhTable() {
             if (!confirmed) return;
 
             phDb.splice(idx, 1);
-            savePhDb();
+            if (!savePhDb()) return;
             resetPhEditor();
             renderPhTable();
             fillPhDropdown();
@@ -998,7 +1006,7 @@ if (phAddBtn) {
             phDb[phEditIndex] = entry;
         }
 
-        savePhDb();
+        if (!savePhDb()) return;
         renderPhTable();
         fillPhDropdown();
         resetPhEditor();
@@ -1049,6 +1057,16 @@ if (phCalcBtn) {
             mismatchMsg +
             `\n\nNote: This is a theoretical estimate; real must buffering means add in small steps and re-measure.`;
     });
+}
+
+function storeDatabase(key, rows) {
+    try {
+        localStorage.setItem(key, JSON.stringify(rows));
+        return true;
+    } catch {
+        alert('The change could not be saved. Browser storage may be full or unavailable. Your previous saved data is retained.');
+        return false;
+    }
 }
 
 // ----- RECIPE DATABASE -----
@@ -1166,7 +1184,9 @@ function exportAllRecipesToPdf(recipes) {
 }
 
 function saveRecipeDb() {
-    localStorage.setItem(RECIPE_DB_KEY, JSON.stringify(recipeDb));
+    const saved = storeDatabase(RECIPE_DB_KEY, recipeDb);
+    if (!saved) recipeDb = loadRecipeDb();
+    return saved;
 }
 
 function renderRecipeTable() {
@@ -1245,7 +1265,7 @@ function renderRecipeTable() {
                         updatedAt: Date.now()
                     };
 
-                    saveRecipeDb();
+                    if (!saveRecipeDb()) return;
                     renderRecipeTable();
                     closeModal();
                 }
@@ -1262,13 +1282,13 @@ function renderRecipeTable() {
             const recipeName = r.name || "this recipe";
 
             const confirmed = confirm(
-                `Delete "${recipeName}"?\n\nThis cannot be undone.`
+                `Delete "${recipeName}" ?\n\nThis cannot be undone.`
             );
 
             if (!confirmed) return;
 
             recipeDb.splice(idx, 1);
-            saveRecipeDb();
+            if (!saveRecipeDb()) return;
             renderRecipeTable();
         });
 
@@ -1373,7 +1393,7 @@ saveRecipeBtn?.addEventListener("click", () => {
                 createdAt: Date.now()
             });
 
-            saveRecipeDb();
+            if (!saveRecipeDb()) return;
             renderRecipeTable();
             closeModal();
         }
@@ -1386,7 +1406,7 @@ recipeManualAddBtn?.addEventListener("click", () => {
         ({ name, text }) => {
             if (!text) return;
 
-            const finalName = name || `Manual recipe (${new Date().toLocaleDateString()})`;
+            const finalName = name || `Manual recipe(${new Date().toLocaleDateString()})`;
 
             recipeDb.unshift({
                 name: finalName,
@@ -1394,7 +1414,7 @@ recipeManualAddBtn?.addEventListener("click", () => {
                 createdAt: Date.now()
             });
 
-            saveRecipeDb();
+            if (!saveRecipeDb()) return;
             renderRecipeTable();
             closeModal();
         }
@@ -1457,8 +1477,8 @@ function readFormToDate(prefix) {
 
 function toDateInputValueLocal(d) {
     const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
 }
 
@@ -1497,7 +1517,7 @@ function initTimeDurationScreen() {
 
         const r = durationBetween(start, end);
         if (r.error) {
-            out.textContent = `Error: ${r.error}`;
+            out.textContent = `Error: ${r.error} `;
             return;
         }
 
@@ -1512,8 +1532,8 @@ function initTimeDurationScreen() {
         const sWord = (r.seconds === 1) ? "second" : "seconds";
 
         out.textContent =
-            `The time between ${startLabel} and ${endLabel} is:${swapNote}\n` +
-            `${r.days} days, ${r.hours} hours, ${r.minutes} minutes, and ${r.seconds} ${sWord}\n\n` +
+            `The time between ${startLabel} and ${endLabel} is:${swapNote} \n` +
+            `${r.days} days, ${r.hours} hours, ${r.minutes} minutes, and ${r.seconds} ${sWord} \n\n` +
             `${totals.daysStr} days\n\n` +
             `${totals.hoursStr} hours\n\n` +
             `${totals.minutesStr} minutes\n\n` +
