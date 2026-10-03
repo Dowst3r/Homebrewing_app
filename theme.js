@@ -80,12 +80,68 @@ export function initThemeSettings() {
         loadMessage = 'Saved settings could not be read. Default colours are active; stored data has not been replaced.';
     }
 
+    const preview = document.getElementById('palette-preview');
+    const previewPanel = document.getElementById('palette-preview-panel');
+    const previewButton = document.getElementById('palette-preview-button');
+    const readability = document.getElementById('palette-readability');
     const fields = {};
+    const pickers = {};
+
+    function readEditorRgb(role) {
+        const rgb = fields[role].map(input => input.value.trim() === '' ? NaN : Number(input.value));
+        return rgb.every(channel => Number.isInteger(channel) && channel >= 0 && channel <= 255)
+            ? rgb : null;
+    }
+
+    function contrastRatio(first, second) {
+        const a = luminance(first);
+        const b = luminance(second);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+    }
+
+    function updatePalettePreview() {
+        const colours = {};
+        for (const role of Object.keys(ROLES)) {
+            const rgb = readEditorRgb(role);
+            if (!rgb) {
+                readability.textContent = 'Enter whole numbers from 0 to 255 to update the preview.';
+                readability.classList.add('palette-warning');
+                return;
+            }
+            colours[role] = rgb;
+        }
+        preview.style.backgroundColor = rgbToHex(colours.background);
+        preview.style.color = rgbToHex(colours.text);
+        preview.style.borderColor = rgbToHex(colours.border);
+        previewPanel.style.backgroundColor = rgbToHex(colours.surface);
+        previewPanel.style.color = rgbToHex(colours.text);
+        previewPanel.style.borderColor = rgbToHex(colours.border);
+        previewButton.style.backgroundColor = rgbToHex(colours.accent);
+        previewButton.style.color = rgbToHex(colours.accentText);
+        previewButton.style.borderColor = rgbToHex(colours.border);
+        const lowContrast = contrastRatio(colours.text, colours.background) < 4.5 ||
+            contrastRatio(colours.text, colours.surface) < 4.5 ||
+            contrastRatio(colours.accentText, colours.accent) < 4.5;
+        readability.textContent = lowContrast
+            ? 'Some text may be hard to read. Try a lighter or darker text colour; you can still save this palette.'
+            : 'The text colours have good contrast.';
+        readability.classList.toggle('palette-warning', lowContrast);
+    }
+
     for (const [role, [label]] of Object.entries(ROLES)) {
         const fieldset = document.createElement('fieldset');
         fieldset.className = 'palette-field';
         const legend = document.createElement('legend');
         legend.textContent = label;
+        const pickerLabel = document.createElement('label');
+        pickerLabel.className = 'palette-picker';
+        pickerLabel.textContent = 'Choose colour';
+        const picker = document.createElement('input');
+        picker.type = 'color';
+        picker.className = 'palette-color';
+        picker.setAttribute('aria-label', `${label}: choose colour`);
+        pickerLabel.append(picker);
+        pickers[role] = picker;
         const row = document.createElement('div');
         row.className = 'palette-rgb';
         fields[role] = ['R', 'G', 'B'].map(channel => {
@@ -99,11 +155,25 @@ export function initThemeSettings() {
             input.step = '1';
             input.required = true;
             input.setAttribute('aria-label', `${label}: ${channel}`);
+            input.addEventListener('input', () => {
+                const rgb = readEditorRgb(role);
+                if (rgb) picker.value = rgbToHex(rgb);
+                updatePalettePreview();
+            });
             channelLabel.append(input);
             row.append(channelLabel);
             return input;
         });
-        fieldset.append(legend, row);
+        const updateFromPicker = () => {
+            const match = /^#([0-9a-f]{6})$/i.exec(picker.value);
+            if (!match) return;
+            const rgb = [0, 2, 4].map(offset => parseInt(match[1].slice(offset, offset + 2), 16));
+            fields[role].forEach((input, index) => { input.value = rgb[index]; });
+            updatePalettePreview();
+        };
+        picker.addEventListener('input', updateFromPicker);
+        picker.addEventListener('change', updateFromPicker);
+        fieldset.append(legend, pickerLabel, row);
         fieldsContainer.append(fieldset);
     }
 
@@ -118,7 +188,9 @@ export function initThemeSettings() {
         nameInput.value = palette.name;
         for (const role of Object.keys(ROLES)) {
             fields[role].forEach((input, index) => { input.value = palette[role][index]; });
+            pickers[role].value = rgbToHex(palette[role]);
         }
+        updatePalettePreview();
     }
 
     function applyTheme(nextTheme, persist = true) {

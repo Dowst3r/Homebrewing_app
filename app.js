@@ -364,9 +364,10 @@ function renderHoneyTable() {
 
         const editBtn = document.createElement('button');
         editBtn.type = 'button';
-        editBtn.textContent = 'Edit';
+        editBtn.textContent = '✎';
         editBtn.className = 'edit-btn';
         editBtn.title = `Edit ${entry.name}`;
+        editBtn.setAttribute('aria-label', editBtn.title);
         editBtn.addEventListener('click', () => {
             beginHoneyEdit(index);
         });
@@ -376,6 +377,7 @@ function renderHoneyTable() {
         delBtn.textContent = '✕';
         delBtn.className = 'delete-btn';
         delBtn.title = `Delete ${entry.name}`;
+        delBtn.setAttribute('aria-label', delBtn.title);
         delBtn.addEventListener('click', () => {
             const confirmed = confirm(
                 `Delete "${entry.name}"?\n\nThis cannot be undone.`
@@ -390,7 +392,10 @@ function renderHoneyTable() {
             fillHoneyDropdown();
         });
 
-        tdActions.append(editBtn, delBtn);
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'table-action-buttons';
+        actionButtons.append(editBtn, delBtn);
+        tdActions.append(actionButtons);
 
         tr.appendChild(tdName);
         tr.appendChild(tdSugar);
@@ -730,9 +735,10 @@ function renderYeastTable() {
 
         const editBtn = document.createElement("button");
         editBtn.type = "button";
-        editBtn.textContent = "Edit";
+        editBtn.textContent = "✎";
         editBtn.className = "edit-btn";
         editBtn.title = `Edit ${y.name}`;
+        editBtn.setAttribute('aria-label', editBtn.title);
         editBtn.addEventListener("click", () => {
             beginYeastEdit(idx);
         });
@@ -742,7 +748,7 @@ function renderYeastTable() {
         delBtn.textContent = "✕";
         delBtn.className = "delete-btn";
         delBtn.title = `Delete ${y.name}`;
-
+        delBtn.setAttribute('aria-label', delBtn.title);
         delBtn.addEventListener("click", () => {
             const confirmed = confirm(
                 `Delete "${y.name}"?\n\nThis cannot be undone.`
@@ -757,7 +763,10 @@ function renderYeastTable() {
             fillYeastDropdown();
         });
 
-        tdActions.append(editBtn, delBtn);
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'table-action-buttons';
+        actionButtons.append(editBtn, delBtn);
+        tdActions.append(actionButtons);
 
         tr.appendChild(tdName);
         tr.appendChild(tdNReq);
@@ -925,9 +934,10 @@ function renderPhTable() {
 
         const editBtn = document.createElement("button");
         editBtn.type = "button";
-        editBtn.textContent = "Edit";
+        editBtn.textContent = "✎";
         editBtn.className = "edit-btn";
         editBtn.title = `Edit ${a.name}`;
+        editBtn.setAttribute('aria-label', editBtn.title);
         editBtn.addEventListener("click", () => {
             beginPhEdit(idx);
         });
@@ -937,6 +947,7 @@ function renderPhTable() {
         delBtn.textContent = "✕";
         delBtn.className = "delete-btn";
         delBtn.title = `Delete ${a.name}`;
+        delBtn.setAttribute('aria-label', delBtn.title);
         delBtn.addEventListener("click", () => {
             const confirmed = confirm(
                 `Delete "${a.name}"?\n\nThis cannot be undone.`
@@ -951,7 +962,10 @@ function renderPhTable() {
             fillPhDropdown();
         });
 
-        tdActions.append(editBtn, delBtn);
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'table-action-buttons';
+        actionButtons.append(editBtn, delBtn);
+        tdActions.append(actionButtons);
 
         tr.append(tdName, tdType, tdStoich, tdMW, tdNotes, tdActions);
         phTableBody.appendChild(tr);
@@ -1233,10 +1247,11 @@ function renderRecipeTable() {
 
         // Edit this recipe
         const editBtn = document.createElement("button");
-        editBtn.textContent = "Edit";
+        editBtn.textContent = "✎";
         editBtn.className = "edit-btn";
         editBtn.type = "button";
         editBtn.title = "Edit this recipe";
+        editBtn.setAttribute('aria-label', editBtn.title);
         editBtn.addEventListener("click", () => {
             openModal(
                 {
@@ -1277,6 +1292,7 @@ function renderRecipeTable() {
         delBtn.textContent = "✕";
         delBtn.className = "delete-btn";
         delBtn.title = "Delete this recipe";
+        delBtn.setAttribute('aria-label', delBtn.title);
         delBtn.type = "button";
         delBtn.addEventListener("click", () => {
             const recipeName = r.name || "this recipe";
@@ -1292,7 +1308,10 @@ function renderRecipeTable() {
             renderRecipeTable();
         });
 
-        tdActions.append(exportBtn, editBtn, delBtn);
+        const actionButtons = document.createElement('div');
+        actionButtons.className = 'table-action-buttons';
+        actionButtons.append(exportBtn, editBtn, delBtn);
+        tdActions.append(actionButtons);
 
         tr.appendChild(tdName);
         tr.appendChild(tdText);

@@ -140,18 +140,20 @@ function applyThemeToChart(chart) {
         ds.backgroundColor = hexToRgba(accent, 0.15);
     });
 
-    chart.options.plugins = chart.options.plugins || {};
-    chart.options.plugins.legend = chart.options.plugins.legend || {};
-    chart.options.plugins.legend.labels = chart.options.plugins.legend.labels || {};
-    chart.options.plugins.legend.labels.color = text;
+    // Edit the plain configuration, rather than copying Chart.js option proxies.
+    const options = chart.config.options;
+    options.plugins = options.plugins || {};
+    options.plugins.legend = options.plugins.legend || {};
+    options.plugins.legend.labels = options.plugins.legend.labels || {};
+    options.plugins.legend.labels.color = text;
 
-    chart.options.scales = chart.options.scales || {};
+    options.scales = options.scales || {};
     for (const axis of ["x", "y"]) {
-        chart.options.scales[axis] = chart.options.scales[axis] || {};
-        chart.options.scales[axis].ticks = chart.options.scales[axis].ticks || {};
-        chart.options.scales[axis].grid = chart.options.scales[axis].grid || {};
-        chart.options.scales[axis].ticks.color = text;
-        chart.options.scales[axis].grid.color = border;
+        options.scales[axis] = options.scales[axis] || {};
+        options.scales[axis].ticks = options.scales[axis].ticks || {};
+        options.scales[axis].grid = options.scales[axis].grid || {};
+        options.scales[axis].ticks.color = text;
+        options.scales[axis].grid.color = border;
     }
 
     chart.update("none");

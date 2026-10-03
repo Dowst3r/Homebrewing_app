@@ -16,9 +16,9 @@
 <body>
   <div class="app">
     <header class="app-header">
-      <h1>Mead Helper - v2.0.0</h1>
+      <h1>Mead Helper - v2.0.1</h1>
       <button id="theme-toggle" class="icon-button" aria-label="Open settings">
-        <img src="gear.png" alt="Settings">
+        <span class="settings-gear" aria-hidden="true"></span>
       </button>
     </header>
 
@@ -39,50 +39,81 @@
       </div>
     </section>
 
-    <section id="screen-settings" class="screen">
-        <button class="back-home">← Home</button>
-        <h2>Settings</h2>
 
-        <!-- Replace the existing settings-row (the two theme switches). -->
-        <label>Colour theme
-            <select id="theme-select">
-                <option value="light">Light</option>
-                <option value="dark">OLED black</option>
-                <option value="pink">Pretty pink</option>
-                <option value="custom-1">Custom 1</option>
-                <option value="custom-2">Custom 2</option>
-            </select>
-        </label>
-        <h3>Personal palettes</h3>
-        <p>Save two palettes. Each colour uses red, green and blue values from 0 to 255.</p>
+
+
+
+
+
+
+
+
+    <section id="screen-settings" class="screen">
+      <button class="back-home">← Home</button>
+      <h2>Settings</h2>
+
+      <label>Colour theme
+        <select id="theme-select">
+          <option value="light">Light</option>
+          <option value="dark">OLED black</option>
+          <option value="pink">Pretty pink</option>
+          <option value="custom-1">Custom 1</option>
+          <option value="custom-2">Custom 2</option>
+        </select>
+      </label>
+
+      <p>Recipes, databases and colours are saved on this device when you add or save them. They are ready when you reopen the app and after normal updates.</p>
+
+      <details class="settings-panel">
+        <summary>Personal colours</summary>
+        <p>Save two personal colour palettes. Tap a colour box to choose a colour, or enter its red, green and blue numbers.</p>
+        <p>RGB means red, green and blue. Each number runs from 0 (none of that colour) to 255 (the most). Black is 0, 0, 0; white is 255, 255, 255; red is 255, 0, 0.</p>
         <label>Palette to edit
-            <select id="palette-slot">
-              <option value="0">Custom 1</option>
-              <option value="1">Custom 2</option>
-            </select>
+          <select id="palette-slot">
+            <option value="0">Custom 1</option>
+            <option value="1">Custom 2</option>
+          </select>
         </label>
         <form id="palette-form">
-            <label>Palette name
-                <input id="palette-name" type="text" maxlength="40" required>
-            </label>
-            <div id="palette-fields"></div>
-            <button class="Calculate_buttons" type="submit">Save and use palette</button>
+          <label>Palette name
+            <input id="palette-name" type="text" maxlength="40" required>
+          </label>
+          <div id="palette-fields"></div>
+          <p>Preview your colours below. The app changes when you press Save and use palette.</p>
+          <div id="palette-preview" class="palette-preview" aria-label="Colour preview">
+            <div id="palette-preview-panel" class="palette-preview-panel">
+              <p>Example panel and text</p>
+              <span id="palette-preview-button" class="palette-preview-button">Example button</span>
+            </div>
+          </div>
+          <p id="palette-readability" role="status" aria-live="polite"></p>
+          <button class="Calculate_buttons" type="submit">Save and use palette</button>
         </form>
         <p id="palette-status" role="status" aria-live="polite"></p>
-        <p>Use the JSON backup below to keep a copy of both palettes with your saved data.</p>
-        <div class="settings-backups">
-          <h3>Backup and restore</h3>
-          <p>Save your databases, recipes and both custom colour palettes to a JSON file.</p>
-          <button id="backup-export-btn" type="button" class="Calculate_buttons secondary-btn">Download JSON backup</button>
-          <label>Restore JSON backup
-            <input id="backup-import-file" type="file" accept=".json,application/json">
-          </label>
-          <p id="backup-status" role="status" aria-live="polite"></p>
-          <button id="app-update-btn" type="button" class="Calculate_buttons secondary-btn" hidden>Apply downloaded update</button>
-          <button id="app-check-update-btn" type="button" class="Calculate_buttons secondary-btn">Check for updates</button>
-          <p id="app-update-status" role="status" aria-live="polite"></p>
-        </div>
+      </details>
+
+      <details class="settings-panel settings-backups">
+        <summary>Optional backup and restore</summary>
+        <p>Download an extra copy for safekeeping or moving to another phone. You do not need to restore a backup when reopening or updating the app.</p>
+        <button id="backup-export-btn" type="button" class="Calculate_buttons secondary-btn">Download backup</button>
+        <label>Restore a saved backup
+          <input id="backup-import-file" type="file" accept=".json,application/json">
+        </label>
+        <p id="backup-status" role="status" aria-live="polite"></p>
+      </details>
+
+      <div class="settings-updates">
+        <h3>App updates</h3>
+        <button id="app-update-btn" type="button" class="Calculate_buttons secondary-btn" hidden>Apply downloaded update</button>
+        <button id="app-check-update-btn" type="button" class="Calculate_buttons secondary-btn">Check for updates</button>
+        <p id="app-update-status" role="status" aria-live="polite"></p>
+      </div>
     </section>
+
+
+
+
+
 
 
 
@@ -170,6 +201,14 @@
     </section>
 
 
+
+
+
+
+
+
+
+
     <!-- pH SCREEN -->
     <section id="screen-ph" class="screen">
       <button class="back-home">← Home</button>
@@ -189,6 +228,14 @@
       <button id="ph-calc-btn" class="Calculate_buttons">Calculate pH Adjustment</button>
       <pre id="ph-output" class="result_box"></pre>
     </section>
+
+
+
+
+
+
+
+
 
 
 
@@ -606,7 +653,7 @@
       <li>PDF download on help page produces a nicer document.</li>
       <li>Adding a fruit/vegetable database that includes informtation on when and where they are in-season.</li>
     </ul>
-    <h3>2.0.1</h3>
+    <h3>2.0.2</h3>
     <ul>
       <li>How backsweetening changes the ABV of the mead.</li>
       <li>Database of common and popular homebrews (mainly for meads).</li>
@@ -614,6 +661,18 @@
     <h3>Previous Releases:</h3>
 
     <div class="version-history">
+
+      <details class="version-details" open>
+        <summary>Version 2.0.1</summary>
+        <ul>
+          <li>Corrected Pretty pink gear and navigation colours.</li>
+          <li>Fixed fermentation charts when applying theme colours.</li>
+          <li>Added pencil edit buttons with larger touch areas and spacing.</li>
+          <li>Collapsed personal colours and optional backups in Settings.</li>
+          <li>Added visual colour pickers, RGB guidance and a live palette preview.</li>
+          <li>Clarified automatic saving on this device.</li>
+        </ul>
+      </details>
 
       <details class="version-details" open>
         <summary>Version 2.0.0</summary>

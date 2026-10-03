@@ -1179,6 +1179,136 @@ html[data-nav-direction="back"] {
     }
 }
 
+/* Pink navigation labels must follow the general theme overrides. */
+body.theme-pink .home-button,
+body.theme-pink .back-home,
+body.theme-pink .help-toc button {
+    color: var(--accent);
+    -webkit-text-fill-color: currentColor;
+}
+
+/* Use the transparent gear as a stencil, with one solid colour. */
+#theme-toggle {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    color: var(--text);
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+body.theme-pink #theme-toggle {
+    color: var(--accent);
+}
+
+.settings-gear {
+    display: block;
+    width: 24px;
+    height: 24px;
+    background-color: currentColor;
+    -webkit-mask: url("./gear.png") center / contain no-repeat;
+    mask: url("./gear.png") center / contain no-repeat;
+    mask-mode: alpha;
+    transform-origin: 50% 50%;
+    transition: transform 500ms ease;
+}
+
+#theme-toggle:hover .settings-gear,
+#theme-toggle:focus-visible .settings-gear,
+#theme-toggle:active .settings-gear {
+    transform: rotate(90deg);
+}
+
+/* Keep the table cell as a cell; put spacing inside it. */
+.table-action-cell {
+    display: table-cell;
+    vertical-align: middle;
+}
+
+.table-action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.table-action-buttons button {
+    min-width: 44px;
+    min-height: 44px;
+    padding: 8px;
+    box-sizing: border-box;
+    margin: 0;
+    flex: 0 0 auto;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.table-action-buttons .edit-btn {
+    font-size: 1.4rem;
+}
+
+/* Closed Settings sections keep the screen short. */
+.settings-panel {
+    margin: 1rem 0;
+    padding: 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: var(--bg-card);
+}
+
+.settings-panel>summary {
+    cursor: pointer;
+    font-weight: 700;
+    min-height: 44px;
+    line-height: 44px;
+}
+
+.palette-picker {
+    margin-bottom: 0.5rem;
+}
+
+.palette-color {
+    width: 100%;
+    height: 44px;
+    padding: 4px;
+    cursor: pointer;
+}
+
+.palette-preview {
+    padding: 1rem;
+    border: 1px solid;
+    border-radius: 0.75rem;
+}
+
+.palette-preview-panel {
+    padding: 0.8rem;
+    border: 1px solid;
+    border-radius: 0.6rem;
+}
+
+.palette-preview-button {
+    display: inline-block;
+    padding: 0.65rem 0.8rem;
+    border: 1px solid;
+    border-radius: 0.6rem;
+    font-weight: 600;
+}
+
+.palette-warning {
+    font-weight: 700;
+}
+
+.settings-updates {
+    margin-top: 1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .settings-gear {
+        transition: none;
+    }
+}
+
 @media print {
     body {
         background: #ffffff !important;
